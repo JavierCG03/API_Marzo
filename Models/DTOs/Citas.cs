@@ -1,0 +1,111 @@
+﻿using Microsoft.Extensions.Options;
+using System.ComponentModel.DataAnnotations;
+
+namespace CarSlineAPI.Models.DTOs
+{
+    public class CrearCitaConTrabajosRequest
+    {
+        [Required]
+        public int TipoOrdenId { get; set; }
+
+        [Required]
+        public int ClienteId { get; set; }
+
+        [Required]
+        public int VehiculoId { get; set; }
+
+
+        [Required]
+        public DateTime FechaCita { get; set; }
+
+        public int? TipoServicioId { get; set; }
+
+        [Required]
+        [MinLength(1, ErrorMessage = "Debe agregar al menos un trabajo")]
+        public List<TrabajoCrearDto> Trabajos { get; set; } = new();
+
+    }
+    /// <summary>
+    /// Request para reagendar una cita existente
+    /// </summary>
+    public class ReagendarCitaRequest
+    {
+        [Required(ErrorMessage = "La nueva fecha es requerida")]
+        public DateTime NuevaFechaCita { get; set; }
+    }
+
+    /// <summary>
+    /// Response al reagendar una cita
+    /// </summary>
+    public class ReagendarCitaResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public int CitaId { get; set; }
+        public DateTime FechaAnterior { get; set; }
+        public DateTime FechaNueva { get; set; }
+    }
+
+    /// <summary>
+    /// DTO completo de orden con trabajos
+    /// </summary>
+    public class CitaConTrabajosDto
+    {
+        public int? Id { get; set; }
+        public int? OrdenId { get; set; }
+        public bool Orden{ get; set; } = false; //valor boleano que define si es orden o cita cita=0 orden=1
+
+        public int TipoOrdenId { get; set; }
+        public int VehiculoId { get; set; }
+        public string VehiculoCompleto { get; set; } = string.Empty;
+        public string VIN { get; set; } = string.Empty;
+        public DateTime FechaCita { get; set; }
+        public List<TrabajoCitaDto> Trabajos { get; set; } = new();
+    }
+
+    public class TrabajoCitaDto
+    {
+        public int Id { get; set; }
+        public string Trabajo { get; set; } = string.Empty;
+        public string? IndicacionesTrabajo { get; set; }
+        public bool RefaccionesListas { get; set; }
+
+    }
+    public class RefaccionTrabajoCitaDto
+    {
+        public int Id { get; set; }
+        public int TrabajoCitaId { get; set; }
+        public int TrabajoOrdenId { get; set; }
+        public string Refaccion { get; set; } = string.Empty;
+        public int Cantidad { get; set; }
+        public decimal Precio { get; set; }
+        public decimal PrecioVenta { get; set; }
+        public decimal Total { get; set; }
+        public bool Activo { get; set; }
+        public DateTime FechaCompra { get; set; }
+    }
+
+    public class AgregarRefaccionCitaRequest
+    {
+        [Required(ErrorMessage = "El ID del trabajo es requerido")]
+        public int CitaTrabajoId { get; set; }
+
+        [Required(ErrorMessage = "El nombre de la refacción es requerido")]
+        [MaxLength(255)]
+        public string Refaccion { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La cantidad es requerida")]
+        [Range(1, int.MaxValue, ErrorMessage = "La cantidad debe ser mayor a 0")]
+        public int Cantidad { get; set; }
+
+        [Required(ErrorMessage = "El precio unitario es requerido")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "El precio debe ser mayor a 0")]
+        public decimal PrecioUnitario { get; set; }
+    }
+    public class AgregarRefaccionCitaResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+    }
+
+}
