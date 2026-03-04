@@ -40,7 +40,10 @@ namespace CarSlineAPI.Services
                     container.Page(page =>
                     {
                         page.Size(PageSizes.Letter);
-                        page.Margin(40);
+                        page.MarginTop(25);
+                        page.MarginRight(40);
+                        page.MarginBottom(30);
+                        page.MarginLeft(40);
                         page.PageColor(Colors.White);
                         page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
@@ -71,22 +74,8 @@ namespace CarSlineAPI.Services
         {
             try
             {
-                // Crear carpeta específica para la orden
-                //string carpetaOrden = Path.Combine(_rutaBasePdfs, numeroOrden);
-                //if (!Directory.Exists(carpetaOrden))
-                //{
-                // Directory.CreateDirectory(carpetaOrden);
-                //}
 
-                // Generar nombre del archivo
-                //string nombreArchivo = $"{numeroOrden}/{numeroOrden}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
-                //string rutaCompleta = Path.Combine(carpetaOrden, nombreArchivo);
-
-                // Generar y guardar PDF
                 var pdfBytes = await GenerarPdfOrdenAsync(orden);
-                //await File.WriteAllBytesAsync(rutaCompleta, pdfBytes);
-
-                //_logger.LogInformation($"✅ PDF guardado en: {rutaCompleta}");
 
                 return await Task.FromResult(pdfBytes);
             }
@@ -112,24 +101,24 @@ namespace CarSlineAPI.Services
                     row.RelativeItem().Column(col =>
                     {
                         col.Item()
-                            .Height(45)
+                            .Height(40)
                             .Image(logoPath)
                             .FitArea();
 
                         col.Item().Text("📍 Las Palomas 590, El Portezuelo")
                             .FontSize(10).Italic();
-                        col.Item().Text("Tel: 771-295-4232")
+                        col.Item().Text(" ☎ Tel: 771-295-4232")
                             .FontSize(9);
                     });
 
                     // Información de la Orden
-                    row.ConstantItem(200).Column(col =>
+                    row.ConstantItem(150).Column(col =>
                     {
                         col.Item().Background(Colors.Red.Darken2).Padding(8).Column(c =>
                         {
-                            c.Item().Text(orden.NumeroOrden)
+                            c.Item().Text(orden.NumeroOrden).AlignRight()
                                 .FontSize(16).Bold().FontColor(Colors.White);
-                            c.Item().Text(orden.TipoOrden)
+                            c.Item().Text(orden.TipoOrden).AlignRight()
                                 .FontSize(11).FontColor(Colors.White);
                         });
 
@@ -141,7 +130,7 @@ namespace CarSlineAPI.Services
                     });
                 });
 
-                column.Item().PaddingTop(10).LineHorizontal(2).LineColor(Colors.Red.Darken2);
+                column.Item().PaddingTop(5).LineHorizontal(2).LineColor(Colors.Red.Darken2);
             });
         }
 
@@ -151,10 +140,10 @@ namespace CarSlineAPI.Services
             {
                 // Información del Cliente y Vehículo
                 column.Item().Element(c => SeccionClienteVehiculo(c, orden));
-                column.Item().PaddingTop(10);
+                column.Item().PaddingTop(5);
 
                 // Trabajos Realizados
-                column.Item().PaddingTop(15).Element(c => SeccionTrabajos(c, orden));
+                column.Item().PaddingTop(10).Element(c => SeccionTrabajos(c, orden));
 
                 // Observaciones
                 if (!string.IsNullOrWhiteSpace(orden.ObservacionesAsesor) ||
@@ -164,7 +153,7 @@ namespace CarSlineAPI.Services
                 }
 
                 // Resumen de Costos
-                column.Item().PaddingTop(15).Element(c => SeccionCostos(c, orden));
+                column.Item().PaddingTop(10).Element(c => SeccionCostos(c, orden));
 
 
                 // Checklist (si existe)
@@ -189,9 +178,17 @@ namespace CarSlineAPI.Services
                         {
                             col.Item().Text("CLIENTE").FontSize(12).Bold()
                                 .FontColor(Colors.Red.Darken2);
-                            col.Item().PaddingTop(5).Text(orden.Cliente.NombreCompleto)
+                            col.Item().PaddingTop(4).Text(orden.Cliente.NombreCompleto)
                                 .FontSize(11).Bold();
-                            col.Item().PaddingTop(2).Text($"RFC: {orden.Cliente.RFC}").FontSize(9);
+                            if (!string.IsNullOrEmpty(orden.Cliente.RFC))
+                            {
+                                col.Item().PaddingTop(2).Text($"RFC: {orden.Cliente.RFC}").FontSize(9);
+                                
+                            }
+                            else
+                            {
+                                col.Item().PaddingTop(2).Text($"RFC: XXXXXXXXXXXXX").FontSize(9);
+                            }                          
                             col.Item().Text($"Tel: {orden.Cliente.TelefonoMovil}").FontSize(9);
                             if (!string.IsNullOrEmpty(orden.Cliente.CorreoElectronico))
                             {
@@ -208,7 +205,7 @@ namespace CarSlineAPI.Services
                         {
                             col.Item().Text("VEHÍCULO").FontSize(12).Bold()
                                 .FontColor(Colors.Red.Darken2);
-                            col.Item().PaddingTop(5).Text(orden.Vehiculo.VehiculoCompleto)
+                            col.Item().PaddingTop(4).Text(orden.Vehiculo.VehiculoCompleto)
                                 .FontSize(11).Bold();
                             col.Item().PaddingTop(2).Text($"VIN: {orden.Vehiculo.VIN}").FontSize(9);
                             if (!string.IsNullOrEmpty(orden.Vehiculo.Placas))
@@ -227,7 +224,7 @@ namespace CarSlineAPI.Services
         {
             container.Column(column =>
             {
-                column.Item().Background(Colors.Red.Darken2).Padding(8)
+                column.Item().Background(Colors.Red.Darken2).Padding(5)
                     .Text("TRABAJOS REALIZADOS").FontSize(13).Bold()
                     .FontColor(Colors.White);
 
@@ -238,107 +235,112 @@ namespace CarSlineAPI.Services
                     column.Item().PaddingBottom(10).Border(1).EnsureSpace(200)
                         .BorderColor(Colors.Grey.Lighten2).Padding(10).Column(col =>
                         {
-                        // Header del trabajo
-                        col.Item().Row(row =>
-                        {
-                            row.RelativeItem().Text(trabajo.Trabajo)
-                                .FontSize(11).Bold();
-                            row.ConstantItem(100).AlignRight()
-                                .Text(trabajo.EstadoTrabajo)
-                                .FontSize(9).Bold().FontColor(Colors.Green.Darken2);
-                        });
-
-                        if (!string.IsNullOrEmpty(trabajo.TecnicoNombre))
-                        {
-                            col.Item().PaddingTop(5).Text($"Técnico: {trabajo.TecnicoNombre}")
-                                .FontSize(9).Italic();
-                        }
-
-
-                        if (trabajo.Refacciones != null && trabajo.Refacciones.Any())
-
-                        {
-                            col.Item().PaddingTop(8).Column(c =>
+                            // Header del trabajo
+                            col.Item().Row(row =>
                             {
-                                c.Item().Text("Refacciones:").FontSize(10).Bold();
+                                row.RelativeItem().Text(trabajo.Trabajo)
+                                    .FontSize(11).Bold();
 
-                                c.Item().PaddingTop(5).Table(table =>
+                                if (!string.IsNullOrEmpty(trabajo.TecnicoNombre))
                                 {
-                                table.ColumnsDefinition(columns =>
-                                {
-                                    columns.RelativeColumn(3);
-                                    columns.ConstantColumn(60);
-                                    columns.ConstantColumn(80);
-                                    columns.ConstantColumn(80);
-                                });
-
-                                // Header
-                                table.Header(header =>
-                                {
-                                    header.Cell().Background(Colors.Grey.Lighten3)
-                                        .Padding(5).Text("Refacción").FontSize(9).Bold();
-                                    header.Cell().Background(Colors.Grey.Lighten3)
-                                        .Padding(5).Text("Cant.").FontSize(9).Bold();
-                                    header.Cell().Background(Colors.Grey.Lighten3)
-                                        .Padding(5).Text("P. Unit.").FontSize(9).Bold();
-                                    header.Cell().Background(Colors.Grey.Lighten3)
-                                        .Padding(5).Text("Total").FontSize(9).Bold();
-                                });
-
-                                // Rows
-                                foreach (var refaccion in trabajo.Refacciones)
-                                    {
-                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                        .Padding(5).Text(refaccion.Refaccion).FontSize(8);
-                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                        .Padding(5).Text(refaccion.Cantidad.ToString()).FontSize(8);
-                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                        .Padding(5).Text($"${refaccion.PrecioUnitario:N2}").FontSize(8);
-                                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                        .Padding(5).Text($"${refaccion.Total:N2}").FontSize(8).Bold();
+                                    row.ConstantItem(200).AlignRight()
+                                        .Text($"Técnico: {trabajo.TecnicoNombre}")
+                                        .FontSize(9).Italic();
                                 }
+
+                                row.ConstantItem(80).AlignRight()
+                                    .Text(trabajo.EstadoTrabajo)
+                                    .FontSize(9).Bold().FontColor(Colors.Green.Darken2);
                             });
-                        });
-                }
 
-                // Costos del trabajo
-                col.Item().PaddingTop(8).EnsureSpace(200).Row(row =>
-                {
-                    row.RelativeItem();
-                    row.ConstantItem(250).Column(c =>
-                    {
-                        c.Item().Row(r =>
-                        {
-                            r.RelativeItem().Text("Mano de Obra:");
-                            r.ConstantItem(80).AlignRight()
-                                .Text($"${trabajo.CostoManoObra:N2}").Bold();
-                        });
-                        c.Item().Row(r =>
-                        {
-                            r.RelativeItem().Text("Refacciones:");
-                            r.ConstantItem(80).AlignRight()
-                                .Text($"${trabajo.TotalRefacciones:N2}").Bold();
-                        });
-                    });
-                });
+                            if (trabajo.Refacciones != null && trabajo.Refacciones.Any())
+                            {
+                                col.Item().PaddingTop(8).Column(c =>
+                                {
+                                    c.Item().PaddingTop(4).Table(table =>
+                                    {
+                                        table.ColumnsDefinition(columns =>
+                                        {
+                                            columns.RelativeColumn(3);
+                                            columns.ConstantColumn(50);
+                                            columns.ConstantColumn(70);
+                                            columns.ConstantColumn(80);
+                                        });
 
-                // Comentarios del técnico
-                if (!string.IsNullOrEmpty(trabajo.ComentariosTecnico))
-                {
-                    col.Item().PaddingTop(8).Background(Colors.Blue.Lighten4)
-                        .Padding(8).Column(c =>
-                        {
-                            c.Item().Text("Comentarios del Técnico:")
-                                        .FontSize(9).Bold();
-                            c.Item().Text(trabajo.ComentariosTecnico)
-                                        .FontSize(9);
+                                        // Header
+                                        table.Header(header =>
+                                        {
+                                            header.Cell().Background(Colors.Grey.Lighten3)
+                                                .Padding(4).Text("Refacciónes Cargadas").FontSize(9).Bold();
+                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter()
+                                                .Padding(4).Text("Cant.").FontSize(9).Bold();
+                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter()
+                                                .Padding(4).Text("P. Unit.").FontSize(9).Bold();
+                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter()
+                                                .Padding(4).Text("Total").FontSize(9).Bold();
+                                        });
+
+                                        // Rows
+                                        foreach (var refaccion in trabajo.Refacciones)
+                                        {
+                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
+                                                .Padding(4).Text(refaccion.Refaccion).FontSize(8);
+                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).AlignCenter()
+                                                .Padding(4).Text(refaccion.Cantidad.ToString()).FontSize(8);
+                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).AlignCenter()
+                                                .Padding(4).Text($"${refaccion.PrecioUnitario:N2}").FontSize(8);
+                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2).AlignCenter()
+                                                .Padding(4).Text($"${refaccion.Total:N2}").FontSize(8).Bold();
+                                        }
+                                    });
+                                });
+                            }
+
+                            if (trabajo.TotalRefacciones > 0 || trabajo.CostoManoObra > 0)
+                            {
+                                // Costos del trabajo
+                                col.Item().PaddingTop(8).EnsureSpace(200).Row(row =>
+                                {
+                                    row.RelativeItem();
+                                    row.ConstantItem(180).Column(c =>
+                                    {
+                                        if (trabajo.TotalRefacciones > 0)
+                                        {
+                                            c.Item().Row(r =>
+                                            {
+                                                r.RelativeItem().Text("Refacciones:").AlignLeft();
+                                                r.ConstantItem(70).AlignLeft().Text($"${trabajo.TotalRefacciones:N2}").Bold();
+                                            });
+                                        }
+
+                                        if (trabajo.CostoManoObra > 0)
+                                        {
+                                            c.Item().PaddingTop(3).Row(r =>
+                                            {
+                                                r.RelativeItem().Text("Mano de Obra:").AlignLeft();
+                                                r.ConstantItem(70).AlignLeft().Text($"${trabajo.CostoManoObra:N2}").Bold();
+                                            });
+                                        }
+                                    });
+                                });
+                            }
+
+                            // Comentarios del técnico
+                            if (!string.IsNullOrEmpty(trabajo.ComentariosTecnico))
+                            {
+                                col.Item().PaddingTop(8).Background(Colors.Blue.Lighten4)
+                                    .Padding(8).Column(c =>
+                                    {
+                                        c.Item().Text("Comentarios del Técnico:")
+                                            .FontSize(9).Bold();
+                                        c.Item().Text(trabajo.ComentariosTecnico)
+                                            .FontSize(9);
+                                    });
+                            }
                         });
                 }
             });
         }
-    });
-}
-
         private void SeccionCheckList(IContainer container, CheckListPdfDto checkList)
         {
             container.Column(column =>
@@ -508,11 +510,8 @@ namespace CarSlineAPI.Services
                                         .Text($"${orden.CostoTotal * 0.16m :N2}").Bold();
                         });
 
-                        col.Item().PaddingTop(10).LineHorizontal(2)
-                                    .LineColor(Colors.Red.Darken2);
-
-                        col.Item().PaddingTop(10).Background(Colors.Red.Darken2)
-                                    .Padding(8).Row(row =>
+                        col.Item().PaddingTop(8).Background(Colors.Red.Darken2)
+                                    .Padding(5).Row(row =>
                         {
                             row.RelativeItem().Text("TOTAL")
                                         .FontSize(13).Bold().FontColor(Colors.White);

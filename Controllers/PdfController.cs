@@ -51,7 +51,7 @@ namespace CarSlineAPI.Controllers
                 return File(
                     pdfBytes,
                     "application/pdf",
-                    $"Orden_{ordenDto.NumeroOrden}_{DateTime.Now:yyyyMMdd}.pdf"
+                    $"Orden_{ordenDto.NumeroOrden}.pdf"
                 );
             }
             catch (Exception ex)

@@ -195,9 +195,6 @@ namespace CarSlineAPI.Controllers
                 });
             }
         }
-        // ============================================
-        // OBTENER REFACCIONES
-        // ============================================
 
         /// GET api/RefaccionesCita/trabajo/{trabajoId}?orden=false  → filtra por TrabajoCitaId
         /// GET api/RefaccionesCita/trabajo/{trabajoId}?orden=true   → filtra por TrabajoOrdenId
@@ -290,6 +287,7 @@ namespace CarSlineAPI.Controllers
                 });
             }
         }
+
         /// <summary>
         /// Obtener todas las refacciones de una cita completa (todos sus trabajos)
         /// GET api/RefaccionesCita/cita/{citaId}

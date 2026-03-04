@@ -134,6 +134,69 @@ namespace CarSlineAPI.Controllers
         }
 
         /// <summary>
+        /// Transferir refacción comprada a refacción de trabajo
+        /// POST api/RefaccionesTrabajo/transferir
+        /// </summary>
+        [HttpPost("transferir")]
+        [ProducesResponseType(typeof(AgregarRefaccionesResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> TransferirRefaccionComprada([FromBody] TransferirRefaccionRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new AgregarRefaccionesResponse { Success = false, Message = "Datos inválidos" });
+
+            try
+            {
+                var refaccionComprada = await _db.RefaccionesCompradas
+                    .FirstOrDefaultAsync(r => r.Id == request.RefaccionCompradaId);
+
+                if (refaccionComprada == null)
+                    return NotFound(new AgregarRefaccionesResponse { Success = false, Message = "Refacción comprada no encontrada" });
+
+                if (refaccionComprada.Activo)
+                    return BadRequest(new AgregarRefaccionesResponse { Success = false, Message = "Esta refacción ya fue transferida a un trabajo" });
+
+                if (!refaccionComprada.TrabajoOrdenId.HasValue)
+                    return BadRequest(new AgregarRefaccionesResponse { Success = false, Message = "La refacción no está vinculada a ningún trabajo de orden. Primero convierta la cita en orden." });
+
+                var trabajo = await _db.TrabajosPorOrden
+                    .Include(t => t.OrdenGeneral)
+                    .FirstOrDefaultAsync(t => t.Id == refaccionComprada.TrabajoOrdenId.Value && t.Activo);
+
+                if (trabajo == null)
+                    return NotFound(new AgregarRefaccionesResponse { Success = false, Message = "El trabajo de orden vinculado no fue encontrado o está inactivo" });
+
+                if (trabajo.EstadoTrabajo == 6)
+                    return BadRequest(new AgregarRefaccionesResponse { Success = false, Message = "No se pueden transferir refacciones a un trabajo cancelado" });
+
+                var refaccionTrabajo = new Refacciontrabajo
+                {
+                    TrabajoId = refaccionComprada.TrabajoOrdenId.Value,
+                    OrdenGeneralId = trabajo.OrdenGeneralId,
+                    Refaccion = refaccionComprada.Refaccion,
+                    Cantidad = refaccionComprada.Cantidad,
+                    PrecioUnitario = request.PrecioVenta
+                };
+
+                _db.Set<Refacciontrabajo>().Add(refaccionTrabajo);
+
+                refaccionComprada.PrecioVenta = request.PrecioVenta;
+                refaccionComprada.Activo = true;
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation($"Refacción comprada {request.RefaccionCompradaId} transferida al trabajo {refaccionComprada.TrabajoOrdenId}.");
+
+                return Ok(new AgregarRefaccionesResponse { Success = true, Message = "Refacción transferida exitosamente al trabajo" });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al transferir refacción comprada {request.RefaccionCompradaId}");
+                return StatusCode(500, new AgregarRefaccionesResponse { Success = false, Message = "Error al transferir refacción" });
+            }
+        }
+        /// <summary>
         /// Obtener todas las refacciones de un trabajo
         /// GET api/RefaccionesTrabajo/trabajo/{trabajoId}
         /// </summary>
@@ -210,7 +273,7 @@ namespace CarSlineAPI.Controllers
                     .Select(r => new
                     {
                         Refaccion = r,
-                        EstadoOrdenId = r.TrabajoPorOrden.OrdenGeneral.EstadoOrdenId
+                        r.TrabajoPorOrden.OrdenGeneral.EstadoOrdenId
                     })
                     .FirstOrDefaultAsync();
 

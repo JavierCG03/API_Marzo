@@ -71,4 +71,13 @@ namespace CarSlineAPI.Models.DTOs
         public decimal TotalRefacciones { get; set; }
         public List<RefaccionTrabajoDto> Refacciones { get; set; } = new();
     }
+    public class TransferirRefaccionRequest
+    {
+        [Required(ErrorMessage = "El ID de la refacción comprada es requerido")]
+        public int RefaccionCompradaId { get; set; }
+
+        [Required(ErrorMessage = "El precio de venta es requerido")]
+        [Range(0.01, double.MaxValue, ErrorMessage = "El precio de venta debe ser mayor a 0")]
+        public decimal PrecioVenta { get; set; }
+    }
 }

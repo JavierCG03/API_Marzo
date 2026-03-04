@@ -44,12 +44,9 @@ namespace CarSlineAPI.Controllers
                 var Orden = await _db.Set<OrdenGeneral>()
                     .FirstOrDefaultAsync(t => t.Id == model.OrdenGeneralId);
 
-                // Verificar que la orden existe
-                var ordenExiste = await _db.Set<OrdenGeneral>()
-                    .AnyAsync(o => o.Id == model.OrdenGeneralId);
 
 
-                if (!ordenExiste)
+                if (Orden == null)
                 {
                     return NotFound($"La orden {model.OrdenGeneralId} no existe");
                 }
