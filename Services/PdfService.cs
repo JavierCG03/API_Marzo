@@ -153,13 +153,13 @@ namespace CarSlineAPI.Services
                 }
 
                 // Resumen de Costos
-                column.Item().PaddingTop(10).Element(c => SeccionCostos(c, orden));
+                column.Item().PaddingTop(8).Element(c => SeccionCostos(c, orden));
 
 
                 // Checklist (si existe)
                 if (orden.CheckList != null)
                 {
-                    column.Item().PaddingTop(15).PageBreak();
+                    column.Item().PaddingTop(40).PageBreak();
                     column.Item().Element(c => SeccionCheckList(c, orden.CheckList));
                 }
 
@@ -341,6 +341,64 @@ namespace CarSlineAPI.Services
                 }
             });
         }
+
+        private void SeccionCostos(IContainer container, OrdenPdfDto orden)
+        {
+            container.Column(column =>
+            {
+                column.Item().AlignRight().Width(250).Border(1).EnsureSpace(200)
+                    .BorderColor(Colors.Red.Darken2).Padding(10).Column(col =>
+                    {
+                        col.Item().Text("RESUMEN DE COSTOS").FontSize(12).Bold()
+                                    .FontColor(Colors.Red.Darken2).AlignCenter();
+
+                        col.Item().PaddingTop(5).LineHorizontal(1)
+                                    .LineColor(Colors.Grey.Lighten2);
+
+                        col.Item().PaddingTop(5).Row(row =>
+                        {
+                            row.RelativeItem().Text("Refacciones:");
+                            row.ConstantItem(100).AlignRight()
+                                        .Text($"${orden.TotalRefacciones:N2}").Bold();
+                        });
+
+                        col.Item().PaddingTop(5).Row(row =>
+                        {
+                            row.RelativeItem().Text("Mano de Obra:");
+                            row.ConstantItem(100).AlignRight()
+                                        .Text($"${orden.TotalManoObra:N2}").Bold();
+                        });
+
+                        col.Item().PaddingTop(5).LineHorizontal(1)
+                                .LineColor(Colors.Black);
+
+                        col.Item().PaddingTop(5).Row(row =>
+                        {
+                            row.RelativeItem().Text("Subtotal:");
+                            row.ConstantItem(100).AlignRight()
+                                        .Text($"${orden.CostoTotal:N2}").Bold();
+                        });
+
+                        col.Item().PaddingTop(2).Row(row =>
+                        {
+                            row.RelativeItem().Text("IVA:");
+                            row.ConstantItem(100).AlignRight()
+                                        .Text($"${orden.CostoTotal * 0.16m:N2}").Bold();
+                        });
+
+                        col.Item().PaddingTop(5).Background(Colors.Red.Darken2)
+                                    .Padding(5).Row(row =>
+                                    {
+                                        row.RelativeItem().Text("TOTAL")
+                                                    .FontSize(13).Bold().FontColor(Colors.White);
+                                        row.ConstantItem(100).AlignRight()
+                                                    .Text($"${orden.CostoTotal_IVA:N2}")
+                                                    .FontSize(14).Bold().FontColor(Colors.White);
+                                    });
+                    });
+            });
+        }
+
         private void SeccionCheckList(IContainer container, CheckListPdfDto checkList)
         {
             container.Column(column =>
@@ -349,7 +407,7 @@ namespace CarSlineAPI.Services
                     .Text("CHECKLIST DE SERVICIO").FontSize(13).Bold()
                     .FontColor(Colors.White);
 
-                column.Item().PaddingTop(10).Table(table =>
+                column.Item().PaddingTop(20).Table(table =>
                 {
                     table.ColumnsDefinition(columns =>
                     {
@@ -398,7 +456,7 @@ namespace CarSlineAPI.Services
                 });
 
                 // Piezas Reemplazadas y Trabajos
-                column.Item().PaddingTop(10).Row(row =>
+                column.Item().PaddingTop(20).Row(row =>
                 {
                     row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
                         .Padding(8).Column(col =>
@@ -430,7 +488,7 @@ namespace CarSlineAPI.Services
             params (string nombre, string valor)[] items)
         {
             // Header de sección
-            table.Cell().ColumnSpan(4).Background(Colors.Grey.Lighten3).PaddingTop(5)
+            table.Cell().ColumnSpan(4).Background(Colors.Grey.Lighten3)
                 .Padding(5).Text(titulo).FontSize(9).Bold();
 
             // Items en pares
@@ -463,63 +521,6 @@ namespace CarSlineAPI.Services
                 row.ConstantItem(15).Text(valor ? "✓" : "✗")
                     .FontColor(valor ? Colors.Green.Medium : Colors.Red.Medium);
                 row.RelativeItem().Text(texto).FontSize(8);
-            });
-        }
-
-        private void SeccionCostos(IContainer container, OrdenPdfDto orden)
-        {
-            container.Column(column =>
-            {
-                column.Item().AlignRight().Width(300).Border(2).EnsureSpace(300)
-                    .BorderColor(Colors.Red.Darken2).Padding(15).Column(col =>
-                    {
-                        col.Item().Text("RESUMEN DE COSTOS").FontSize(12).Bold()
-                                    .FontColor(Colors.Red.Darken2).AlignCenter();
-
-                        col.Item().PaddingTop(10).LineHorizontal(1)
-                                    .LineColor(Colors.Grey.Lighten2);
-
-                        col.Item().PaddingTop(10).Row(row =>
-                        {
-                            row.RelativeItem().Text("Refacciones:");
-                            row.ConstantItem(100).AlignRight()
-                                        .Text($"${orden.TotalRefacciones:N2}").Bold();
-                        });
-
-                        col.Item().PaddingTop(5).Row(row =>
-                        {
-                            row.RelativeItem().Text("Mano de Obra:");
-                            row.ConstantItem(100).AlignRight()
-                                        .Text($"${orden.TotalManoObra:N2}").Bold();
-                        });
-
-                        col.Item().PaddingTop(5).LineHorizontal(1)
-                                .LineColor(Colors.Black);
-
-                        col.Item().PaddingTop(5).Row(row =>
-                        {
-                            row.RelativeItem().Text("Subtotal:");
-                            row.ConstantItem(100).AlignRight()
-                                        .Text($"${orden.CostoTotal:N2}").Bold();
-                        });
-
-                        col.Item().PaddingTop(5).Row(row =>
-                        {
-                            row.RelativeItem().Text("IVA:");
-                            row.ConstantItem(100).AlignRight()
-                                        .Text($"${orden.CostoTotal * 0.16m :N2}").Bold();
-                        });
-
-                        col.Item().PaddingTop(8).Background(Colors.Red.Darken2)
-                                    .Padding(5).Row(row =>
-                        {
-                            row.RelativeItem().Text("TOTAL")
-                                        .FontSize(13).Bold().FontColor(Colors.White);
-                            row.ConstantItem(100).AlignRight()
-                                        .Text($"${orden.CostoTotal_IVA:N2}")
-                                        .FontSize(14).Bold().FontColor(Colors.White);
-                        });
-                    });
             });
         }
 
