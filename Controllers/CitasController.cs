@@ -193,7 +193,6 @@ namespace CarSlineAPI.Controllers
                         .Include(o => o.Trabajos.Where(t => t.Activo))
                         .Where(o => o.TipoOrdenId == tipoOrdenId
                                  && o.Activo
-                                 && o.EstadoOrdenId< 3
                                  && o.FechaCreacion >= fechaConsulta
                                  && o.FechaCreacion < fechaSiguiente)
                         .OrderBy(o => o.FechaCreacion)
@@ -260,6 +259,7 @@ namespace CarSlineAPI.Controllers
                         .Include(o => o.Trabajos.Where(t => t.Activo))
                         .Where(o => o.TipoOrdenId == tipoOrdenId
                                  && o.Activo
+                                 && o.EstadoOrdenId < 3
                                  && o.FechaCreacion >= fechaConsulta
                                  && o.FechaCreacion < fechaSiguiente)
                         .OrderBy(o => o.FechaCreacion)
