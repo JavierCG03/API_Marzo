@@ -25,13 +25,60 @@ namespace CarSlineAPI.Controllers
         [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> CrearCliente([FromBody] ClienteRequest req)
         {
-            if (!ModelState.IsValid) return BadRequest(new { Success = false, Message = "Datos inválidos" });
+            if (!ModelState.IsValid)
+                return BadRequest(new { Success = false, Message = "Datos inválidos" });
 
+            // ── Validación: teléfono móvil duplicado ──────────────────────────
+            if (!string.IsNullOrWhiteSpace(req.TelefonoMovil))
+            {
+                var clienteConTelefono = await _db.Clientes
+                    .Where(c => c.Activo && c.TelefonoMovil == req.TelefonoMovil.Trim())
+                    .Select(c => new { c.NombreCompleto })
+                    .FirstOrDefaultAsync();
+
+                if (clienteConTelefono != null)
+                {
+                    _logger.LogWarning("Intento de crear cliente con teléfono duplicado: {Telefono}", req.TelefonoMovil);
+                    return BadRequest(new
+                    {
+                        Success = false,
+                        Message = $"El teléfono {req.TelefonoMovil} ya está registrado para el cliente: {clienteConTelefono.NombreCompleto}.",
+                        Campo = "TelefonoMovil"
+                    });
+                }
+            }
+
+            // ── Validación: RFC duplicado (solo si viene con valor) ───────────
+            if (!string.IsNullOrWhiteSpace(req.RFC))
+            {
+                if (req.RFC !="XXXXXXXXXXXX")
+                {
+                    var clienteConRfc = await _db.Clientes
+                    .Where(c => c.Activo && c.RFC == req.RFC.Trim().ToUpper())
+                    .Select(c => new { c.NombreCompleto })
+                    .FirstOrDefaultAsync();
+
+                    if (clienteConRfc != null)
+                    {
+                        _logger.LogWarning("Intento de crear cliente con RFC duplicado: {RFC}", req.RFC);
+                        return BadRequest(new
+                        {
+                            Success = false,
+                            Message = $"El RFC {req.RFC.ToUpper()} ya está registrado para el cliente: {clienteConRfc.NombreCompleto}.",
+                            Campo = "RFC"
+                        });
+                    }
+
+                }
+
+            }
+
+            // ── Crear el cliente ──────────────────────────────────────────────
             var cliente = new Cliente
             {
                 NombreCompleto = req.NombreCompleto,
-                RFC = req.RFC,
-                TelefonoMovil = req.TelefonoMovil,
+                RFC = req.RFC?.Trim().ToUpper(),
+                TelefonoMovil = req.TelefonoMovil?.Trim(),
                 TelefonoCasa = req.TelefonoCasa,
                 CorreoElectronico = req.CorreoElectronico,
                 Colonia = req.Colonia,
@@ -65,11 +112,7 @@ namespace CarSlineAPI.Controllers
         public async Task<IActionResult> ActualizarCliente(int id, [FromBody] ClienteRequest req)
         {
             if (!ModelState.IsValid)
-                return BadRequest(new ClienteResponse
-                {
-                    Success = false,
-                    Message = "Datos inválidos"
-                });
+                return BadRequest(new ClienteResponse { Success = false, Message = "Datos inválidos" });
 
             try
             {
@@ -78,16 +121,55 @@ namespace CarSlineAPI.Controllers
                 if (cliente == null || !cliente.Activo)
                 {
                     _logger.LogWarning($"Cliente con ID {id} no encontrado");
-                    return NotFound(new ClienteResponse
+                    return NotFound(new ClienteResponse { Success = false, Message = "Cliente no encontrado" });
+                }
+
+                // ── Validación: teléfono duplicado en otro cliente ────────────
+                if (!string.IsNullOrWhiteSpace(req.TelefonoMovil))
+                {
+                    var clienteConTelefono = await _db.Clientes
+                        .Where(c => c.Activo && c.Id != id && c.TelefonoMovil == req.TelefonoMovil.Trim())
+                        .Select(c => new { c.NombreCompleto })
+                        .FirstOrDefaultAsync();
+
+                    if (clienteConTelefono != null)
                     {
-                        Success = false,
-                        Message = "Cliente no encontrado"
-                    });
+                        _logger.LogWarning("Intento de actualizar cliente {Id} con teléfono duplicado: {Telefono}", id, req.TelefonoMovil);
+                        return BadRequest(new ClienteResponse
+                        {
+                            Success = false,
+                            Message = $"El teléfono {req.TelefonoMovil} ya está registrado para el cliente: {clienteConTelefono.NombreCompleto}."
+                        });
+                    }
+                }
+
+                // ── Validación: RFC duplicado en otro cliente ─────────────────
+                if (!string.IsNullOrWhiteSpace(req.RFC))
+                {
+                    if(req.RFC != "XXXXXXXXXXXX")
+                    {
+                        var clienteConRfc = await _db.Clientes
+                            .Where(c => c.Activo && c.Id != id && c.RFC == req.RFC.Trim().ToUpper())
+                            .Select(c => new { c.NombreCompleto })
+                            .FirstOrDefaultAsync();
+
+                        if (clienteConRfc != null)
+                        {
+                            _logger.LogWarning("Intento de actualizar cliente {Id} con RFC duplicado: {RFC}", id, req.RFC);
+                            return BadRequest(new ClienteResponse
+                            {
+                                Success = false,
+                                Message = $"El RFC {req.RFC.ToUpper()} ya está registrado para el cliente: {clienteConRfc.NombreCompleto}."
+                            });
+                        }
+
+                    }
+
                 }
 
                 cliente.NombreCompleto = req.NombreCompleto;
-                cliente.RFC = req.RFC;
-                cliente.TelefonoMovil = req.TelefonoMovil;
+                cliente.RFC = req.RFC?.Trim().ToUpper();
+                cliente.TelefonoMovil = req.TelefonoMovil?.Trim();
                 cliente.TelefonoCasa = req.TelefonoCasa;
                 cliente.CorreoElectronico = req.CorreoElectronico;
                 cliente.Colonia = req.Colonia;
@@ -112,16 +194,12 @@ namespace CarSlineAPI.Controllers
             catch (DbUpdateException ex)
             {
                 _logger.LogError(ex, $"Error al actualizar cliente ID {id}");
-                return StatusCode(500, new ClienteResponse
-                {
-                    Success = false,
-                    Message = "Error al actualizar cliente"
-                });
+                return StatusCode(500, new ClienteResponse { Success = false, Message = "Error al actualizar cliente" });
             }
         }
 
         /// <summary>
-        /// NUEVO: Buscar clientes por nombre (retorna lista si hay múltiples coincidencias)
+        /// Buscar clientes por nombre (retorna lista si hay múltiples coincidencias)
         /// </summary>
         [HttpGet("buscar-nombre/{nombre}")]
         [ProducesResponseType(typeof(BuscarClientesResponse), StatusCodes.Status200OK)]
@@ -139,11 +217,10 @@ namespace CarSlineAPI.Controllers
                     });
                 }
 
-                // Búsqueda parcial (LIKE)
                 var clientes = await _db.Clientes
                     .Where(c => c.Activo && c.NombreCompleto.Contains(nombre))
                     .OrderBy(c => c.NombreCompleto)
-                    .Take(20) // Limitar a 20 resultados
+                    .Take(20)
                     .Select(c => new ClienteDto
                     {
                         Id = c.Id,
@@ -192,7 +269,7 @@ namespace CarSlineAPI.Controllers
         }
 
         /// <summary>
-        /// MANTENER: Buscar por teléfono (búsqueda exacta, retorna un solo cliente)
+        /// Buscar por teléfono (búsqueda exacta, retorna un solo cliente)
         /// </summary>
         [HttpGet("buscar-telefono/{telefono}")]
         public async Task<IActionResult> BuscarPorTelefono(string telefono)
@@ -227,7 +304,7 @@ namespace CarSlineAPI.Controllers
         }
 
         /// <summary>
-        /// NUEVO: Obtener cliente por ID (para cargar datos después de seleccionar de la lista)
+        /// Obtener cliente por ID
         /// </summary>
         [HttpGet("{id}")]
         [ProducesResponseType(typeof(ClienteResponse), StatusCodes.Status200OK)]
@@ -242,11 +319,7 @@ namespace CarSlineAPI.Controllers
 
                 if (cliente == null)
                 {
-                    return NotFound(new ClienteResponse
-                    {
-                        Success = false,
-                        Message = "Cliente no encontrado"
-                    });
+                    return NotFound(new ClienteResponse { Success = false, Message = "Cliente no encontrado" });
                 }
 
                 return Ok(new ClienteResponse
@@ -275,11 +348,7 @@ namespace CarSlineAPI.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, $"Error al obtener cliente ID {id}");
-                return StatusCode(500, new ClienteResponse
-                {
-                    Success = false,
-                    Message = "Error al obtener cliente"
-                });
+                return StatusCode(500, new ClienteResponse { Success = false, Message = "Error al obtener cliente" });
             }
         }
     }

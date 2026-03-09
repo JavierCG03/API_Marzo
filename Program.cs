@@ -9,8 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 // ============================================
 // CONFIGURACIÓN PARA RED LOCAL
 // ============================================
-// Configurar para escuchar en todas las interfaces de red (0.0.0.0)
-// Esto permite que dispositivos en la red local se conecten
+
 builder.WebHost.UseUrls("http://0.0.0.0:5293");
 
 // ============================================
@@ -20,7 +19,6 @@ builder.WebHost.UseUrls("http://0.0.0.0:5293");
 // Agregar controladores
 builder.Services.AddControllers();
 
-// Configurar Swagger/OpenAPI
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

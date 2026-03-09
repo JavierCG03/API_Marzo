@@ -72,8 +72,6 @@ namespace CarSlineAPI.Controllers
         {
             try
             {
-                //_logger.LogInformation($"💾 Solicitud de guardar PDF para orden {ordenId}");
-
                 var ordenDto = await ObtenerDatosOrdenAsync(ordenId);
 
                 if (ordenDto == null)
