@@ -33,6 +33,10 @@ namespace CarSlineAPI.Data
         public DbSet<Cita> Citas { get; set; }
         public DbSet<TrabajoPorCita> TrabajosPorCitas { get; set; }
         public DbSet<RefaccionComprada> RefaccionesCompradas { get; set; }
+        public DbSet<DatosAvaluo> DatosAvaluos { get; set; }
+        public DbSet<EquipamientoAvaluo> EquipamientoAvaluos { get; set; }
+        public DbSet<AvaluoFoto> AvaluoFotos { get; set; }
+        public DbSet<ReparacionAvaluo> ReparacionesAvaluos { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -214,6 +218,25 @@ namespace CarSlineAPI.Data
                 entity.HasOne(e => e.OrdenGeneral)
                     .WithMany()
                     .HasForeignKey(e => e.OrdenGeneralId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<EquipamientoAvaluo>(entity =>
+            {
+                entity.ToTable("equipamientoavaluos");
+
+                entity.HasIndex(e => e.AvaluoId)
+                    .IsUnique()
+                    .HasDatabaseName("UX_Avaluo");
+
+                entity.HasOne(e => e.Avaluo)
+                    .WithOne(a => a.Equipamiento)
+                    .HasForeignKey<EquipamientoAvaluo>(e => e.AvaluoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Asesor)
+                    .WithMany()
+                    .HasForeignKey(e => e.AsesorId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
         }

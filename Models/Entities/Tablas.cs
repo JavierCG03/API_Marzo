@@ -783,6 +783,213 @@ namespace CarSlineAPI.Models.Entities
         [ForeignKey("TrabajoOrdenId")]
         public virtual TrabajoPorOrden? TrabajoPorOrden { get; set; }
     }
+    // ============================================
+    // AVALÚOS - Entidades para Tablas.cs
+    // ============================================
+
+    [Table("datosavaluos")]
+    public class DatosAvaluo
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int AsesorId { get; set; }
+
+        [Required, MaxLength(200)]
+        public string NombreCompleto { get; set; } = string.Empty;
+
+        [Required, MaxLength(50)]
+        public string TipoCliente { get; set; } = string.Empty;
+
+        [Required, MaxLength(20)]
+        public string Telefono1 { get; set; } = string.Empty;
+
+        [MaxLength(20)]
+        public string? Telefono2 { get; set; }
+
+        [Required, MaxLength(50)]
+        public string Marca { get; set; } = string.Empty;
+
+        [Required, MaxLength(50)]
+        public string Modelo { get; set; } = string.Empty;
+
+        [Required, MaxLength(100)]
+        public string Version { get; set; } = string.Empty;
+
+        [Required]
+        public short Anio { get; set; }
+
+        [MaxLength(30)]
+        public string? Color { get; set; }
+
+        [Required, MaxLength(17)]
+        public string VIN { get; set; } = string.Empty;
+
+        [MaxLength(15)]
+        public string Placas { get; set; } = "S/P";
+
+        [Required]
+        public int Kilometraje { get; set; }
+
+        [MaxLength(200)]
+        public string CuentaDeVehiculo { get; set; } = "No Aplica";
+
+        [Column(TypeName = "DECIMAL(9,2)")]
+        public decimal PrecioSolicitado { get; set; } = 0.00m;
+
+        [Column(TypeName = "DECIMAL(8,2)")]
+        public decimal CostoAproximadoReacondicionamiento { get; set; } = 0.00m;
+
+        public DateTime FechaAvaluo { get; set; } = DateTime.Now;
+
+        public bool BajaPlacas { get; set; } = false;
+
+        public bool VehiculoApto { get; set; } = true;
+
+        [Column(TypeName = "DECIMAL(9,2)")]
+        public decimal PrecioAutorizado { get; set; } = 0.00m;
+
+        public bool VehiculoTomadoRevision { get; set; } = false;
+
+        public bool VehiculoComprado { get; set; } = false;
+
+        public bool Activo { get; set; } = true;
+
+        // Navegación
+        [ForeignKey("AsesorId")]
+        public virtual Usuario? Asesor { get; set; }
+
+        public virtual EquipamientoAvaluo? Equipamiento { get; set; }
+        public virtual ICollection<AvaluoFoto> Fotos { get; set; } = new List<AvaluoFoto>();
+        public virtual ICollection<ReparacionAvaluo> Reparaciones { get; set; } = new List<ReparacionAvaluo>();
+    }
+
+
+    [Table("equipamientoavaluos")]
+    public class EquipamientoAvaluo
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int AvaluoId { get; set; }
+
+        [Required]
+        public int AsesorId { get; set; }
+
+        // Equipamiento
+        public bool ACC { get; set; } = false;
+        public bool Quemacocos { get; set; } = false;
+        public bool EspejosElectricos { get; set; } = false;
+        public bool SegurosElectricos { get; set; } = false;
+        public bool CristalesElectricos { get; set; } = false;
+        public bool AsientosElectricos { get; set; } = false;
+        public bool FarosNiebla { get; set; } = false;
+        public bool RinesAluminio { get; set; } = false;
+        public bool ControlesVolante { get; set; } = false;
+        public bool EstereoCD { get; set; } = false;
+        public bool ABS { get; set; } = false;
+        public bool DireccionAsistida { get; set; } = false;
+        public bool BolsasAire { get; set; } = false;
+        public bool TransmisionAutomatica { get; set; } = false;
+        public bool TransmisionManual { get; set; } = false;
+        public bool Turbo { get; set; } = false;
+        public bool Traccion4x4 { get; set; } = false;
+        public bool Bluetooth { get; set; } = false;
+        public bool USB { get; set; } = false;
+        public bool Pantalla { get; set; } = false;
+        public bool GPS { get; set; } = false;
+
+        public byte CantidadPuertas { get; set; } = 2;
+
+        [Required, MaxLength(150)]
+        public string Vestiduras { get; set; } = string.Empty;
+
+        [Required, MaxLength(100)]
+        public string Motor { get; set; } = string.Empty;
+
+        public byte CantidadCilindros { get; set; } = 4;
+
+        public bool FacturaOriginal { get; set; } = false;
+
+        public byte NumeroDuenos { get; set; } = 1;
+
+        public byte Refacturaciones { get; set; } = 0;
+
+        public short? UltimaTenenciaPagada { get; set; }
+
+        public short? Verificacion { get; set; }
+
+        public bool DuplicadoLlave { get; set; } = false;
+
+        public bool CarnetServicios { get; set; } = false;
+
+        [Column(TypeName = "TEXT")]
+        public string? EquipoAdicional { get; set; }
+
+        [Required, MaxLength(20)]
+        public string MarcaLlantasDelanteras { get; set; } = string.Empty;
+
+        public byte? VidaUtilLlantasDelanteras { get; set; }
+
+        [Required, MaxLength(20)]
+        public string MarcaLlantasTraseras { get; set; } = string.Empty;
+
+        public byte? VidaUtilLlantasTraseras { get; set; }
+
+        // Navegación
+        [ForeignKey("AvaluoId")]
+        public virtual DatosAvaluo? Avaluo { get; set; }
+
+        [ForeignKey("AsesorId")]
+        public virtual Usuario? Asesor { get; set; }
+    }
+
+
+    [Table("avaluosfotos")]
+    public class AvaluoFoto
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int AvaluoId { get; set; }
+
+        [MaxLength(50)]
+        public string? TipoFoto { get; set; }
+
+        [MaxLength(300)]
+        public string? RutaFoto { get; set; }
+
+        public DateTime Fecha { get; set; } = DateTime.Now;
+
+        // Navegación
+        [ForeignKey("AvaluoId")]
+        public virtual DatosAvaluo? Avaluo { get; set; }
+    }
+
+
+    [Table("reparacionesavaluos")]
+    public class ReparacionAvaluo
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int AvaluoId { get; set; }
+
+        [Required, MaxLength(200)]
+        public string Descripcion { get; set; } = string.Empty;
+
+        [Column(TypeName = "DECIMAL(8,2)")]
+        public decimal CostoAproximado { get; set; } = 0.00m;
+
+        // Navegación
+        [ForeignKey("AvaluoId")]
+        public virtual DatosAvaluo? Avaluo { get; set; }
+    }
+
 }
 
 
