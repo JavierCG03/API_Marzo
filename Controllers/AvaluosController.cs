@@ -401,6 +401,45 @@ namespace CarSlineAPI.Controllers
             }
         }
 
+        [HttpGet("DatosSimpelesAvaluo/{id}")]
+        [ProducesResponseType(typeof(AvaluoDatosSimplesResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ObtenerDatosSimplesAvaluo(int id)
+        {
+            try
+            {
+                var avaluo = await _db.DatosAvaluos
+                    .Where(a => a.Id == id)
+                    .FirstOrDefaultAsync();
+
+                if (avaluo == null)
+                    return NotFound(new AvaluoDatosSimplesResponse
+                    {
+                        Success = false,
+                        Message = "Avalúo no encontrado"
+                    });
+
+                return Ok(new AvaluoDatosSimplesResponse
+                {
+                    Success = true,
+                    Message = "Avalúo encontrado",
+                    VehiculoCompleto = $"{avaluo.Marca} {avaluo.Modelo} {avaluo.Version} / {avaluo.Anio}",
+                    VIN = avaluo.VIN,
+                    Vendedor = avaluo.NombreCompleto,
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al obtener avalúo {id}");
+                return StatusCode(500, new AvaluoDatosSimplesResponse
+                {
+                    Success = false,
+                    Message = "Error al obtener avalúo"
+                });
+            }
+        }
+
+
         // ============================================
         // GET: api/Avaluos/{id}
         // ============================================

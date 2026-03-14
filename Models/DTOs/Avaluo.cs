@@ -214,7 +214,15 @@ namespace CarSlineAPI.Models.DTOs
         public List<FotoAvaluoDto> Fotos { get; set; } = new();
         public int CantidadFotos { get; set; }
     }
+    public class AvaluoDatosSimplesResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string Vendedor { get; set; } = string.Empty;
+        public string VehiculoCompleto { get; set; } = string.Empty;
+        public string VIN { get; set; } = string.Empty;
 
+    }
     // ============================================
     // DATA TRANSFER OBJECTS
     // ============================================
