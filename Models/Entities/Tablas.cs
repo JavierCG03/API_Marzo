@@ -844,6 +844,9 @@ namespace CarSlineAPI.Models.Entities
         public DateTime FechaAvaluo { get; set; } = DateTime.Now;
 
         public bool BajaPlacas { get; set; } = false;
+        public bool AvaluoEquipamiento { get; set; } = false;
+        public bool AvaluoReparaciones { get; set; } = false;
+        public bool FotografiasAvaluo { get; set; } = false;
 
         public bool VehiculoApto { get; set; } = true;
 
@@ -979,8 +982,13 @@ namespace CarSlineAPI.Models.Entities
         [Required]
         public int AvaluoId { get; set; }
 
+        [Required]
+        public int TecnicoId { get; set; }
+
         [Required, MaxLength(200)]
-        public string Descripcion { get; set; } = string.Empty;
+        public string ReparacionNecesaria { get; set; } = string.Empty;
+
+        public string? DescripcionReparacion { get; set; } = string.Empty;
 
         [Column(TypeName = "DECIMAL(8,2)")]
         public decimal CostoAproximado { get; set; } = 0.00m;
@@ -988,6 +996,9 @@ namespace CarSlineAPI.Models.Entities
         // Navegación
         [ForeignKey("AvaluoId")]
         public virtual DatosAvaluo? Avaluo { get; set; }
+
+        [ForeignKey("TecnicoId")]
+        public virtual Usuario? Tecnico { get; set; }
     }
 
 }

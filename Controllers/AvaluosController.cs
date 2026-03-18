@@ -135,8 +135,7 @@ namespace CarSlineAPI.Controllers
                     });
 
                 // Verificar que no exista ya equipamiento para este avalúo
-                var existeEquipamiento = await _db.EquipamientoAvaluos
-                    .AnyAsync(e => e.AvaluoId == request.AvaluoId);
+                var existeEquipamiento = avaluo.AvaluoEquipamiento;
 
                 if (existeEquipamiento)
                     return BadRequest(new EquipamientoResponse
@@ -187,6 +186,8 @@ namespace CarSlineAPI.Controllers
                     MarcaLlantasTraseras = request.MarcaLlantasTraseras,
                     VidaUtilLlantasTraseras = request.VidaUtilLlantasTraseras
                 };
+
+                avaluo.AvaluoEquipamiento = true;
 
                 _db.EquipamientoAvaluos.Add(equipamiento);
                 await _db.SaveChangesAsync();
@@ -251,7 +252,9 @@ namespace CarSlineAPI.Controllers
                     var reparacion = new ReparacionAvaluo
                     {
                         AvaluoId = request.AvaluoId,
-                        Descripcion = item.Descripcion,
+                        TecnicoId = request.TecnicoId,
+                        ReparacionNecesaria = item.Reparacion,
+                        DescripcionReparacion = item.DescripcionReparacion,
                         CostoAproximado = item.CostoAproximado
                     };
 
@@ -275,8 +278,8 @@ namespace CarSlineAPI.Controllers
                     Reparaciones = reparacionesGuardadas.Select(r => new ReparacionDto
                     {
                         Id = r.Id,
-                        AvaluoId = r.AvaluoId,
-                        Descripcion = r.Descripcion,
+                        ReparacionNecesaria = r.ReparacionNecesaria,
+                        DescripcionReparacion = r.DescripcionReparacion,
                         CostoAproximado = r.CostoAproximado
                     }).ToList(),
                     TotalCostoReparaciones = avaluo.CostoAproximadoReacondicionamiento
@@ -369,6 +372,7 @@ namespace CarSlineAPI.Controllers
                     _db.AvaluoFotos.Add(foto);
                     fotosGuardadas.Add(foto);
                 }
+                avaluo.FotografiasAvaluo = true;
 
                 await _db.SaveChangesAsync();
 
@@ -400,6 +404,57 @@ namespace CarSlineAPI.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// Obtener Avaluos 
+        /// GET api/Avaluos/MisAvaluos/{UsuarioId}
+        /// </summary>
+        /// 
+        [HttpGet("MisAvaluos/{UsuarioId}")]
+        [ProducesResponseType(typeof(MisAvaluosResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ObtenerMisAvaluos(int UsuarioId)
+        {
+            try
+            {
+                var avaluos = await _db.DatosAvaluos
+                .Where(o => o.AsesorId == UsuarioId
+                         && o.Activo)
+                .OrderBy(o => o.FechaAvaluo)
+                .Select(o => new AvaluoSimpleDto
+                {
+                    Id = o.Id,
+                    Vendedor = o.NombreCompleto,
+                    VehiculoCompleto = $"{o.Marca} {o.Modelo} {o.Version} / {o.Anio}",
+                    VIN = o.VIN,
+                    EquipamientoAvaluo = o.AvaluoEquipamiento,
+                    FotosAvaluo = o.FotografiasAvaluo,
+                    ReparacionesAvaluo = o.AvaluoReparaciones,
+                    PrecioSolicitado = o.PrecioSolicitado,
+                    PrecioAutorizado = o.PrecioAutorizado
+
+                })
+                .ToListAsync();
+
+                MisAvaluosResponse response = new MisAvaluosResponse
+                {
+                    Success = true,
+                    Message = avaluos.Count > 0
+                        ? "Avalúos obtenidos exitosamente"
+                        : "No tienes avalúos registrados",
+                    Avaluos = avaluos
+                };
+                return Ok(response);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener àvaluos");
+                return StatusCode(500, new { Message = "Error al obtener Avaluos" });
+            }
+        }
+
+
 
         [HttpGet("DatosSimpelesAvaluo/{id}")]
         [ProducesResponseType(typeof(AvaluoDatosSimplesResponse), StatusCodes.Status200OK)]
@@ -479,8 +534,8 @@ namespace CarSlineAPI.Controllers
                     Reparaciones = avaluo.Reparaciones.Select(r => new ReparacionDto
                     {
                         Id = r.Id,
-                        AvaluoId = r.AvaluoId,
-                        Descripcion = r.Descripcion,
+                        ReparacionNecesaria = r.ReparacionNecesaria,
+                        DescripcionReparacion = r.DescripcionReparacion,
                         CostoAproximado = r.CostoAproximado
                     }).ToList(),
                     Fotos = avaluo.Fotos.Select(f => new FotoAvaluoDto

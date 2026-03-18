@@ -156,6 +156,10 @@ namespace CarSlineAPI.Models.DTOs
         [Required]
         public int AvaluoId { get; set; }
 
+        [Required]
+        public int TecnicoId{ get; set; }
+
+
         [Required, MinLength(1, ErrorMessage = "Debe agregar al menos una reparación")]
         public List<ReparacionItemRequest> Reparaciones { get; set; } = new();
     }
@@ -164,7 +168,9 @@ namespace CarSlineAPI.Models.DTOs
     {
         [Required(ErrorMessage = "La descripción es requerida")]
         [MaxLength(200)]
-        public string Descripcion { get; set; } = string.Empty;
+        public string Reparacion { get; set; } = string.Empty;
+
+        public string? DescripcionReparacion { get; set; } = string.Empty;
 
         [Required]
         [Range(0, double.MaxValue)]
@@ -214,6 +220,28 @@ namespace CarSlineAPI.Models.DTOs
         public List<FotoAvaluoDto> Fotos { get; set; } = new();
         public int CantidadFotos { get; set; }
     }
+
+    public class MisAvaluosResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public List<AvaluoSimpleDto> Avaluos { get; set; } = new();
+    }
+
+    public class AvaluoSimpleDto
+    {        
+        public int Id { get; set; }
+        public string Vendedor { get; set; } = string.Empty;
+        public string VehiculoCompleto { get; set; } = string.Empty;
+        public string VIN { get; set; } = string.Empty;
+        public bool EquipamientoAvaluo { get; set; }
+        public bool FotosAvaluo { get; set; }
+        public bool ReparacionesAvaluo { get; set; }
+        public decimal PrecioSolicitado { get; set; }
+        public decimal PrecioAutorizado { get; set; }
+    }
+
+
     public class AvaluoDatosSimplesResponse
     {
         public bool Success { get; set; }
@@ -305,8 +333,8 @@ namespace CarSlineAPI.Models.DTOs
     public class ReparacionDto
     {
         public int Id { get; set; }
-        public int AvaluoId { get; set; }
-        public string Descripcion { get; set; } = string.Empty;
+        public string ReparacionNecesaria { get; set; } = string.Empty;
+        public string DescripcionReparacion { get; set; } = string.Empty;
         public decimal CostoAproximado { get; set; }
     }
 
