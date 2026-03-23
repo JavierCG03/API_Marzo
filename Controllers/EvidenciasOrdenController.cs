@@ -13,7 +13,7 @@ namespace CarSlineAPI.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly ILogger<EvidenciasOrdenController> _logger;
-        private readonly string _rutaBaseEvidencias = @"C:\Users\LENOVO\Downloads\Evidencias_Ordenes";
+        private readonly string _rutaBaseEvidencias = @"C:\Users\Carsline\Downloads\Evidencias_Ordenes";
         public EvidenciasOrdenController(ApplicationDbContext db, ILogger<EvidenciasOrdenController> logger)
         {
             _db = db;

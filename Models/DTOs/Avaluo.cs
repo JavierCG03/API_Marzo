@@ -59,6 +59,12 @@ namespace CarSlineAPI.Models.DTOs
         [Range(0, double.MaxValue)]
         public decimal PrecioSolicitado { get; set; } = 0;
     }
+    public class CrearAvaluoResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public int? AvaluoId { get; set; }
+    }
 
     public class CrearEquipamientoRequest
     {
@@ -137,20 +143,6 @@ namespace CarSlineAPI.Models.DTOs
         public byte? VidaUtilLlantasTraseras { get; set; }
     }
 
-    public class CrearReparacionRequest
-    {
-        [Required]
-        public int AvaluoId { get; set; }
-
-        [Required(ErrorMessage = "La descripción es requerida")]
-        [MaxLength(200)]
-        public string Descripcion { get; set; } = string.Empty;
-
-        [Required]
-        [Range(0, double.MaxValue, ErrorMessage = "El costo debe ser mayor o igual a 0")]
-        public decimal CostoAproximado { get; set; }
-    }
-
     public class CrearReparacionesRequest
     {
         [Required]
@@ -190,19 +182,16 @@ namespace CarSlineAPI.Models.DTOs
     // RESPONSE DTOs
     // ============================================
 
-    public class AvaluoResponse
+    public class CrearEquipamientoResponse
     {
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
-        public int AvaluoId { get; set; }
-        public AvaluoDto? Avaluo { get; set; }
+        public int? EquipamientoId { get; set; }
     }
-
-    public class EquipamientoResponse
+    public class AgregarReparacionesResponse
     {
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
-        public EquipamientoDto? Equipamiento { get; set; }
     }
 
     public class ReparacionesResponse
@@ -241,7 +230,6 @@ namespace CarSlineAPI.Models.DTOs
         public decimal PrecioAutorizado { get; set; }
     }
 
-
     public class AvaluoDatosSimplesResponse
     {
         public bool Success { get; set; }
@@ -251,6 +239,18 @@ namespace CarSlineAPI.Models.DTOs
         public string VIN { get; set; } = string.Empty;
 
     }
+
+    public class AvaluoCompletoResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public int AvaluoId { get; set; }
+        public AvaluoDto? Avaluo { get; set; }
+        public EquipamientoDto? Equipamiento { get; set; }
+        public List<ReparacionDto> Reparaciones { get; set; } = new(); 
+
+    }
+
     // ============================================
     // DATA TRANSFER OBJECTS
     // ============================================
@@ -258,7 +258,6 @@ namespace CarSlineAPI.Models.DTOs
     public class AvaluoDto
     {
         public int Id { get; set; }
-        public int AsesorId { get; set; }
         public string AsesorNombre { get; set; } = string.Empty;
         public string NombreCompleto { get; set; } = string.Empty;
         public string TipoCliente { get; set; } = string.Empty;
@@ -278,13 +277,11 @@ namespace CarSlineAPI.Models.DTOs
         public DateTime FechaAvaluo { get; set; }
         public bool BajaPlacas { get; set; }
         public bool VehiculoApto { get; set; }
+        public bool Fotografias { get; set; }
         public decimal PrecioAutorizado { get; set; }
         public bool VehiculoTomadoRevision { get; set; }
         public bool VehiculoComprado { get; set; }
-        public bool Activo { get; set; }
 
-        // Info adicional
-        public string VehiculoCompleto => $"{Marca} {Modelo} {Version} {Anio}";
     }
 
     public class EquipamientoDto
@@ -334,7 +331,7 @@ namespace CarSlineAPI.Models.DTOs
     {
         public int Id { get; set; }
         public string ReparacionNecesaria { get; set; } = string.Empty;
-        public string DescripcionReparacion { get; set; } = string.Empty;
+        public string? DescripcionReparacion { get; set; } = string.Empty;
         public decimal CostoAproximado { get; set; }
     }
 

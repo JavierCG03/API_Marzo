@@ -42,30 +42,28 @@ namespace CarSlineAPI.Controllers
                 var resultados = new List<ResultadoBusquedaDto>();
                 var terminoUpper = termino.ToUpper().Trim();
 
-                // 🔍 DETECTAR TIPO DE BÚSQUEDA
 
-                // 1️⃣ ¿Es un número de orden? (Formato: ABC-123456)
                 if (EsNumeroOrden(terminoUpper))
                 {
                     var ordenesEncontradas = await BuscarOrdenes(terminoUpper);
                     resultados.AddRange(ordenesEncontradas);
                 }
 
-                // 2️⃣ ¿Son 4 dígitos del VIN?
+
                 if (terminoUpper.Length == 4 && terminoUpper.All(char.IsLetterOrDigit))
                 {
                     var vehiculosEncontrados = await BuscarVehiculosPorVIN(terminoUpper);
                     resultados.AddRange(vehiculosEncontrados);
                 }
 
-                // 3️⃣ ¿Es nombre de cliente? (Si tiene letras y más de 3 caracteres)
+
                 if (terminoUpper.Length >= 3 && terminoUpper.Any(char.IsLetter))
                 {
                     var clientesEncontrados = await BuscarClientes(terminoUpper);
                     resultados.AddRange(clientesEncontrados);
                 }
 
-                // 🎯 RESPUESTA
+
                 if (!resultados.Any())
                 {
                     return Ok(new BusquedaUnificadaResponse
