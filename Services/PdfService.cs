@@ -1,6 +1,7 @@
 ﻿using CarSlineAPI.Models.DTOs;
-using QuestPDF.Infrastructure;
 using CarSlineAPI.Pdf;
+using QuestPDF.Fluent;
+using QuestPDF.Infrastructure;
 
 namespace CarSlineAPI.Services
 {
@@ -9,8 +10,8 @@ namespace CarSlineAPI.Services
         Task<byte[]> GenerarPdfOrdenAsync(OrdenPdfDto orden);
         Task<byte[]> GuardarPdfOrdenAsync(OrdenPdfDto orden, string numeroOrden);
 
-        //Task<byte[]> GenerarPdfAvaluoAsync(AvaluoPdfDto avaluo);
-       // Task<byte[]> GuardarPdfAvaluoAsync(AvaluoPdfDto avaluo, string numeroAvaluo);
+        Task<byte[]> GenerarPdfAvaluoAsync(AvaluoCompletoResponse data);
+        Task<byte[]> GuardarPdfAvaluoAsync(AvaluoCompletoResponse data, string numeroAvaluo);
     }
 
     /// <summary>
@@ -32,7 +33,6 @@ namespace CarSlineAPI.Services
         {
             _logger = logger;
 
-            // Licencia QuestPDF (Community — gratis)
             QuestPDF.Settings.License = LicenseType.Community;
 
             if (!Directory.Exists(_rutaBasePdfs))
@@ -67,7 +67,6 @@ namespace CarSlineAPI.Services
             try
             {
                 var pdfBytes = await GenerarPdfOrdenAsync(orden);
-                // TODO: persistir pdfBytes en disco / Azure Blob / S3 usando _rutaBasePdfs
                 return pdfBytes;
             }
             catch (Exception ex)
@@ -80,14 +79,14 @@ namespace CarSlineAPI.Services
         // -------------------------------------------------------
         // Avalúos
         // -------------------------------------------------------
-        /*
-        public async Task<byte[]> GenerarPdfAvaluoAsync(AvaluoPdfDto avaluo)
+
+        public async Task<byte[]> GenerarPdfAvaluoAsync(AvaluoCompletoResponse data)
         {
             try
             {
-                _logger.LogInformation("📄 Generando PDF para avalúo {NumeroAvaluo}", avaluo.NumeroAvaluo);
+                _logger.LogInformation("📄 Generando PDF para avalúo ID {AvaluoId}", data.AvaluoId);
 
-                var builder = new AvaluoPdfBuilder(avaluo);
+                var builder = new AvaluoPdfBuilder(data);
                 var pdfBytes = builder.Build().GeneratePdf();
 
                 _logger.LogInformation("✅ PDF avalúo generado: {Bytes} bytes", pdfBytes.Length);
@@ -95,17 +94,16 @@ namespace CarSlineAPI.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "❌ Error al generar PDF para avalúo {NumeroAvaluo}", avaluo.NumeroAvaluo);
+                _logger.LogError(ex, "❌ Error al generar PDF para avalúo ID {AvaluoId}", data.AvaluoId);
                 throw;
             }
         }
 
-        public async Task<byte[]> GuardarPdfAvaluoAsync(AvaluoPdfDto avaluo, string numeroAvaluo)
+        public async Task<byte[]> GuardarPdfAvaluoAsync(AvaluoCompletoResponse data, string numeroAvaluo)
         {
             try
             {
-                var pdfBytes = await GenerarPdfAvaluoAsync(avaluo);
-                // TODO: persistir pdfBytes en disco / Azure Blob / S3 usando _rutaBasePdfs
+                var pdfBytes = await GenerarPdfAvaluoAsync(data);
                 return pdfBytes;
             }
             catch (Exception ex)
@@ -113,6 +111,6 @@ namespace CarSlineAPI.Services
                 _logger.LogError(ex, "❌ Error al guardar PDF para avalúo {NumeroAvaluo}", numeroAvaluo);
                 throw;
             }
-        }*/
+        }
     }
 }

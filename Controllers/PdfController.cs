@@ -104,6 +104,72 @@ namespace CarSlineAPI.Controllers
             }
         }
 
+
+        /// <summary>
+        /// Generar y descargar PDF de un avalúo
+        /// GET api/Pdf/avaluo/{avaluoId}/descargar
+        /// </summary>
+        [HttpGet("avaluo/{avaluoId}/descargar")]
+        [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DescargarPdfAvaluo(int avaluoId)
+        {
+            try
+            {
+                _logger.LogInformation($"📥 Solicitud de descarga PDF para avalúo {avaluoId}");
+
+                var data = await ObtenerDatosAvaluoAsync(avaluoId);
+                if (data == null)
+                    return NotFound(new { Message = "Avalúo no encontrado" });
+
+                var pdfBytes = await _pdfService.GenerarPdfAvaluoAsync(data);
+                string folio = $"Avaluo_{avaluoId:D6}";
+
+                return File(pdfBytes, "application/pdf", $"{folio}.pdf");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"❌ Error al generar PDF para avalúo {avaluoId}");
+                return StatusCode(500, new { Message = $"Error al generar PDF: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Vista previa en Base64 del PDF de un avalúo
+        /// POST api/Pdf/avaluo/{avaluoId}/preview
+        /// </summary>
+        [HttpPost("avaluo/{avaluoId}/preview")]
+        [ProducesResponseType(typeof(PdfPreviewResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PreviewPdfAvaluo(int avaluoId)
+        {
+            try
+            {
+                var data = await ObtenerDatosAvaluoAsync(avaluoId);
+                if (data == null)
+                    return NotFound(new { Message = "Avalúo no encontrado" });
+
+                var pdfBytes = await _pdfService.GuardarPdfAvaluoAsync(data, $"Avaluo_{avaluoId:D6}");
+
+                return Ok(new PdfPreviewResponse
+                {
+                    Success = true,
+                    PdfBase64 = Convert.ToBase64String(pdfBytes),
+                    NumeroOrden = $"AVL_{data.Avaluo.VIN}",
+                    TamanoBytes = pdfBytes.Length
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"❌ Error en vista previa PDF avalúo {avaluoId}");
+                return StatusCode(500, new PdfPreviewResponse
+                {
+                    Success = false,
+                    Message = $"Error: {ex.Message}"
+                });
+            }
+        }
+
         private async Task<OrdenPdfDto?> ObtenerDatosOrdenAsync(int ordenId)
         {
             var orden = await _db.OrdenesGenerales
@@ -152,7 +218,7 @@ namespace CarSlineAPI.Controllers
                         ? $"{duracion.Value.Hours}h {duracion.Value.Minutes}m"
                         : null,
                     CostoManoObra = trabajo.CostoManoObra,
-                    TotalRefacciones = trabajo.RefaccionesTotal,              
+                    TotalRefacciones = trabajo.RefaccionesTotal,
                     Refacciones = refacciones,
                     ComentariosTecnico = trabajo.ComentariosTecnico
                 });
@@ -241,6 +307,135 @@ namespace CarSlineAPI.Controllers
                 ProgresoGeneral = orden.ProgresoGeneral
             };
         }
+
+
+        // -------------------------------------------------------
+        // Método privado que construye el AvaluoCompletoResponse
+        // -------------------------------------------------------
+
+        private async Task<AvaluoCompletoResponse?> ObtenerDatosAvaluoAsync(int avaluoId)
+        {
+            var avaluo = await _db.DatosAvaluos
+                .Where(a => a.Id == avaluoId && a.Activo)
+                .FirstOrDefaultAsync();
+
+            if (avaluo == null) return null;
+
+            // Equipamiento (si existe)
+            EquipamientoDto? equipamientoDto = null;
+            if (avaluo.AvaluoEquipamiento)
+            {
+                var eq = await _db.EquipamientoAvaluos
+                    .FirstOrDefaultAsync(e => e.AvaluoId == avaluoId);
+
+                if (eq != null)
+                    equipamientoDto = MapearEquipamientoDto(eq);
+            }
+
+            // Reparaciones (si existen)
+            List<ReparacionDto>? reparacionesDto = null;
+            if (avaluo.AvaluoReparaciones)
+            {
+                reparacionesDto = await _db.ReparacionesAvaluos
+                    .Where(r => r.AvaluoId == avaluoId)
+                    .Select(r => new ReparacionDto
+                    {
+                        Id = r.Id,
+                        ReparacionNecesaria = r.ReparacionNecesaria,
+                        DescripcionReparacion = r.DescripcionReparacion,
+                        CostoAproximado = r.CostoAproximado
+                    })
+                    .ToListAsync();
+            }
+
+            // Asesor (valuador)
+            string asesorNombre = "";
+            var asesor = await _db.Usuarios.FindAsync(avaluo.AsesorId);
+            if (asesor != null)
+                asesorNombre = asesor.NombreCompleto;
+
+            return new AvaluoCompletoResponse
+            {
+                Success = true,
+                Message = "OK",
+                AvaluoId = avaluo.Id,
+                Avaluo = MapearAvaluoDto(avaluo, asesorNombre),
+                Equipamiento = equipamientoDto,
+                Reparaciones = reparacionesDto ?? new List<ReparacionDto>()
+            };
+        }
+
+        // Reutiliza los mismos helpers de AvaluosController
+        private static AvaluoDto MapearAvaluoDto(CarSlineAPI.Models.Entities.DatosAvaluo a, string asesorNombre) => new()
+        {
+            Id = a.Id,
+            AsesorNombre = asesorNombre,
+            NombreCompleto = a.NombreCompleto,
+            TipoCliente = a.TipoCliente,
+            Telefono1 = a.Telefono1,
+            Telefono2 = a.Telefono2,
+            Marca = a.Marca,
+            Modelo = a.Modelo,
+            Version = a.Version,
+            Anio = a.Anio,
+            Color = a.Color,
+            VIN = a.VIN,
+            Placas = a.Placas,
+            Kilometraje = a.Kilometraje,
+            CuentaDeVehiculo = a.CuentaDeVehiculo,
+            PrecioSolicitado = a.PrecioSolicitado,
+            CostoAproximadoReacondicionamiento = a.CostoAproximadoReacondicionamiento,
+            FechaAvaluo = a.FechaAvaluo,
+            BajaPlacas = a.BajaPlacas,
+            Fotografias = a.FotografiasAvaluo,
+            VehiculoApto = a.VehiculoApto,
+            PrecioAutorizado = a.PrecioAutorizado,
+            VehiculoTomadoRevision = a.VehiculoTomadoRevision,
+            VehiculoComprado = a.VehiculoComprado
+        };
+
+        private static EquipamientoDto MapearEquipamientoDto(CarSlineAPI.Models.Entities.EquipamientoAvaluo e) => new()
+        {
+            Id = e.Id,
+            AvaluoId = e.AvaluoId,
+            ACC = e.ACC,
+            Quemacocos = e.Quemacocos,
+            EspejosElectricos = e.EspejosElectricos,
+            SegurosElectricos = e.SegurosElectricos,
+            CristalesElectricos = e.CristalesElectricos,
+            AsientosElectricos = e.AsientosElectricos,
+            FarosNiebla = e.FarosNiebla,
+            RinesAluminio = e.RinesAluminio,
+            ControlesVolante = e.ControlesVolante,
+            EstereoCD = e.EstereoCD,
+            ABS = e.ABS,
+            DireccionAsistida = e.DireccionAsistida,
+            BolsasAire = e.BolsasAire,
+            TransmisionAutomatica = e.TransmisionAutomatica,
+            TransmisionManual = e.TransmisionManual,
+            Turbo = e.Turbo,
+            Traccion4x4 = e.Traccion4x4,
+            Bluetooth = e.Bluetooth,
+            USB = e.USB,
+            Pantalla = e.Pantalla,
+            GPS = e.GPS,
+            CantidadPuertas = e.CantidadPuertas,
+            Vestiduras = e.Vestiduras,
+            Motor = e.Motor,
+            CantidadCilindros = e.CantidadCilindros,
+            FacturaOriginal = e.FacturaOriginal,
+            NumeroDuenos = e.NumeroDuenos,
+            Refacturaciones = e.Refacturaciones,
+            UltimaTenenciaPagada = e.UltimaTenenciaPagada,
+            Verificacion = e.Verificacion,
+            DuplicadoLlave = e.DuplicadoLlave,
+            CarnetServicios = e.CarnetServicios,
+            EquipoAdicional = e.EquipoAdicional,
+            MarcaLlantasDelanteras = e.MarcaLlantasDelanteras,
+            VidaUtilLlantasDelanteras = e.VidaUtilLlantasDelanteras,
+            MarcaLlantasTraseras = e.MarcaLlantasTraseras,
+            VidaUtilLlantasTraseras = e.VidaUtilLlantasTraseras
+        };
     }
 
 }

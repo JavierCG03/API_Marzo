@@ -32,7 +32,7 @@ namespace CarSlineAPI.Pdf
                 container.Page(page =>
                 {
                     page.Size(PageSizes.Letter);
-                    page.MarginTop(25);
+                    page.MarginTop(10);
                     page.MarginRight(40);
                     page.MarginBottom(30);
                     page.MarginLeft(40);
@@ -63,7 +63,7 @@ namespace CarSlineAPI.Pdf
                             .Image(_logoPath)
                             .FitArea();
 
-                        col.Item().Text("📍 Las Palomas 590, El Portezuelo")
+                        col.Item().Text("📍 Las Palomas 59 0, El Portezuelo")
                             .FontSize(10).Italic();
                         col.Item().Text(" ☎ Tel: 771-295-4232")
                             .FontSize(9);
