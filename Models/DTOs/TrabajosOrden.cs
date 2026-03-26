@@ -29,7 +29,23 @@ namespace CarSlineAPI.Models.DTOs
         [Required]
         public int TecnicoId { get; set; }
     }
-
+    public class OrdenesActivasDto
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public int Servicios { get; set; }
+        public int Reparaciones { get; set; }
+        public int Diagnosticos { get; set; }
+        public int Garantias { get; set; }
+    }
+    public class TrabajosActivosTecnicoDto
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public int Pendientes { get; set; }
+        public int Pausados { get; set; }
+        public int Finalizados { get; set; }
+    }
     /// <summary>
     /// DTO de trabajo individual
     /// </summary>

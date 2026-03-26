@@ -37,6 +37,11 @@ namespace CarSlineAPI.Data
         public DbSet<EquipamientoAvaluo> EquipamientoAvaluos { get; set; }
         public DbSet<AvaluoFoto> AvaluoFotos { get; set; }
         public DbSet<ReparacionAvaluo> ReparacionesAvaluos { get; set; }
+        public DbSet<InventarioGeneral> InventarioGeneral { get; set; }
+        public DbSet<EntradaInventario> EntradasInventario { get; set; }
+        public DbSet<SalidaInventario> SalidasInventario { get; set; }
+        public DbSet<CompatibilidadRefaccion> CompatibilidadRefacciones { get; set; }
+        public DbSet<RefaccionEquivalente> RefaccionesEquivalentes { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -238,6 +243,61 @@ namespace CarSlineAPI.Data
                     .WithMany()
                     .HasForeignKey(e => e.AsesorId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<RefaccionEquivalente>(entity =>
+            {
+                entity.ToTable("RefaccionesEquivalentes");
+
+                // UNIQUE compuesto — mismo par no puede repetirse
+                entity.HasIndex(e => new { e.InventarioId, e.InventarioEquivalenteId })
+                    .IsUnique()
+                    .HasDatabaseName("UQ_Equivalencia");
+
+                // FK principal
+                entity.HasOne(e => e.Inventario)
+                    .WithMany(i => i.Equivalentes)
+                    .HasForeignKey(e => e.InventarioId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // FK equivalente — WithMany vacío porque no navegamos desde este lado
+                entity.HasOne(e => e.InventarioEquivalente)
+                    .WithMany()
+                    .HasForeignKey(e => e.InventarioEquivalenteId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<CompatibilidadRefaccion>(entity =>
+            {
+                entity.ToTable("CompatibilidadRefacciones");
+
+                entity.HasIndex(e => new { e.Marca, e.Modelo, e.AnioInicio, e.AnioFin })
+                    .HasDatabaseName("IX_Compat_Busqueda");
+
+                entity.HasOne(e => e.Inventario)
+                    .WithMany(i => i.Compatibilidades)
+                    .HasForeignKey(e => e.InventarioId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<SalidaInventario>(entity =>
+            {
+                entity.ToTable("SalidasInventario");
+
+                // Dos FK hacia usuarios — EF Core necesita distinguirlas
+                entity.HasOne(e => e.Almacenista)
+                    .WithMany()
+                    .HasForeignKey(e => e.AlmacenistaId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Tecnico)
+                    .WithMany()
+                    .HasForeignKey(e => e.TecnicoId)
+                    .OnDelete(DeleteBehavior.SetNull);
+
+                entity.HasOne(e => e.Trabajo)
+                    .WithMany()
+                    .HasForeignKey(e => e.TrabajoId)
+                    .OnDelete(DeleteBehavior.SetNull);
             });
         }
     }

@@ -32,9 +32,9 @@ namespace CarSlineAPI.Pdf
                 container.Page(page =>
                 {
                     page.Size(PageSizes.Letter);
-                    page.MarginTop(10);
+                    page.MarginTop(15);
                     page.MarginRight(40);
-                    page.MarginBottom(30);
+                    page.MarginBottom(25);
                     page.MarginLeft(40);
                     page.PageColor(Colors.White);
                     page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
@@ -59,30 +59,26 @@ namespace CarSlineAPI.Pdf
                     row.RelativeItem().Column(col =>
                     {
                         col.Item()
-                            .Height(40)
+                            .Height(35)
                             .Image(_logoPath)
                             .FitArea();
-
-                        col.Item().Text("📍 Las Palomas 59 0, El Portezuelo")
-                            .FontSize(10).Italic();
-                        col.Item().Text(" ☎ Tel: 771-295-4232")
-                            .FontSize(9);
+                        col.Item().Text("📍 Las Palomas 590, El Portezuelo  ☎ Tel:\u00A0771-295-4232").FontSize(10).Italic();
                     });
 
                     row.ConstantItem(150).Column(col =>
                     {
-                        col.Item().Background(Colors.Red.Darken2).Padding(8).Column(c =>
+                        col.Item().Background(Colors.Red.Darken2).Padding(4).Column(c =>
                         {
                             c.Item().Text(_orden.NumeroOrden).AlignRight()
-                                .FontSize(16).Bold().FontColor(Colors.White);
+                                .FontSize(14).Bold().FontColor(Colors.White);
                             c.Item().Text(_orden.TipoOrden).AlignRight()
-                                .FontSize(11).FontColor(Colors.White);
+                                .FontSize(10).FontColor(Colors.White);
                         });
 
-                        col.Item().Padding(5).Column(c =>
+                        col.Item().Padding(3).Column(c =>
                         {
                             c.Item().Text($"Estado de Orden: {_orden.EstadoOrden}")
-                                .FontSize(9).Bold();
+                                .FontSize(9).Bold().AlignRight();
                         });
                     });
                 });
@@ -93,10 +89,9 @@ namespace CarSlineAPI.Pdf
 
         private void CrearContenido(IContainer container)
         {
-            container.PaddingTop(15).Column(column =>
+            container.PaddingTop(5).Column(column =>
             {
                 column.Item().Element(c => SeccionClienteVehiculo(c));
-                column.Item().PaddingTop(5);
 
                 column.Item().PaddingTop(10).Element(c => SeccionTrabajos(c));
 
@@ -128,12 +123,12 @@ namespace CarSlineAPI.Pdf
                 {
                     // Cliente
                     row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
-                        .Padding(10).Column(col =>
+                        .PaddingTop(5).PaddingBottom(5).PaddingRight(10).PaddingLeft(10).Column(col =>
                         {
-                            col.Item().Text("CLIENTE").FontSize(12).Bold()
+                            col.Item().Text("CLIENTE").FontSize(11).Bold()
                                 .FontColor(Colors.Red.Darken2);
-                            col.Item().PaddingTop(4).Text(_orden.Cliente.NombreCompleto)
-                                .FontSize(11).Bold();
+                            col.Item().PaddingTop(3).Text(_orden.Cliente.NombreCompleto)
+                                .FontSize(10).Bold();
 
                             if (!string.IsNullOrEmpty(_orden.Cliente.RFC))
                                 col.Item().PaddingTop(2).Text($"RFC: {_orden.Cliente.RFC}").FontSize(9);
@@ -150,12 +145,12 @@ namespace CarSlineAPI.Pdf
 
                     // Vehículo
                     row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
-                        .Padding(10).Column(col =>
+                        .PaddingTop(5).PaddingBottom(5).PaddingRight(10).PaddingLeft(10).Column(col =>
                         {
-                            col.Item().Text("VEHÍCULO").FontSize(12).Bold()
+                            col.Item().Text("VEHÍCULO").FontSize(11).Bold()
                                 .FontColor(Colors.Red.Darken2);
-                            col.Item().PaddingTop(4).Text(_orden.Vehiculo.VehiculoCompleto)
-                                .FontSize(11).Bold();
+                            col.Item().PaddingTop(3).Text(_orden.Vehiculo.VehiculoCompleto)
+                                .FontSize(10).Bold();
                             col.Item().PaddingTop(2).Text($"VIN: {_orden.Vehiculo.VIN}").FontSize(9);
 
                             if (!string.IsNullOrEmpty(_orden.Vehiculo.Placas))
@@ -172,16 +167,16 @@ namespace CarSlineAPI.Pdf
         {
             container.Column(column =>
             {
-                column.Item().Background(Colors.Red.Darken2).Padding(5)
-                    .Text("TRABAJOS REALIZADOS").FontSize(13).Bold()
+                column.Item().Background(Colors.Red.Darken2).Padding(3)
+                    .Text("TRABAJOS REALIZADOS").FontSize(11).Bold()
                     .FontColor(Colors.White);
 
-                column.Item().PaddingTop(10);
+                column.Item().PaddingTop(5);
 
                 foreach (var trabajo in _orden.Trabajos)
                 {
-                    column.Item().PaddingBottom(10).Border(1).EnsureSpace(200)
-                        .BorderColor(Colors.Grey.Lighten2).Padding(10).Column(col =>
+                    column.Item().PaddingBottom(5).Border(1).EnsureSpace(200)
+                        .BorderColor(Colors.Grey.Lighten2).PaddingTop(8).PaddingBottom(5).PaddingRight(10).PaddingLeft(10).Column(col =>
                         {
                             col.Item().Row(row =>
                             {
@@ -198,7 +193,7 @@ namespace CarSlineAPI.Pdf
 
                             if (trabajo.Refacciones != null && trabajo.Refacciones.Any())
                             {
-                                col.Item().PaddingTop(8).Column(c =>
+                                col.Item().PaddingTop(2).Column(c =>
                                 {
                                     c.Item().PaddingTop(4).Table(table =>
                                     {
@@ -214,11 +209,11 @@ namespace CarSlineAPI.Pdf
                                         {
                                             header.Cell().Background(Colors.Grey.Lighten3).Padding(4)
                                                 .Text("Refacciones Cargadas").FontSize(9).Bold();
-                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter().Padding(4)
+                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter().Padding(2)
                                                 .Text("Cant.").FontSize(9).Bold();
-                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter().Padding(4)
+                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter().Padding(2)
                                                 .Text("P. Unit.").FontSize(9).Bold();
-                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter().Padding(4)
+                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter().Padding(2)
                                                 .Text("Total").FontSize(9).Bold();
                                         });
 
@@ -227,11 +222,11 @@ namespace CarSlineAPI.Pdf
                                             table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
                                                 .Padding(4).Text(refaccion.Refaccion).FontSize(8);
                                             table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .AlignCenter().Padding(4).Text(refaccion.Cantidad.ToString()).FontSize(8);
+                                                .AlignCenter().Padding(3).Text(refaccion.Cantidad.ToString()).FontSize(8);
                                             table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .AlignCenter().Padding(4).Text($"${refaccion.PrecioUnitario:N2}").FontSize(8);
+                                                .AlignCenter().Padding(3).Text($"${refaccion.PrecioUnitario:N2}").FontSize(8);
                                             table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .AlignCenter().Padding(4).Text($"${refaccion.Total:N2}").FontSize(8).Bold();
+                                                .AlignCenter().Padding(3).Text($"${refaccion.Total:N2}").FontSize(8).Bold();
                                         }
                                     });
                                 });
@@ -239,7 +234,7 @@ namespace CarSlineAPI.Pdf
 
                             if (trabajo.TotalRefacciones > 0 || trabajo.CostoManoObra > 0)
                             {
-                                col.Item().PaddingTop(8).EnsureSpace(200).Row(row =>
+                                col.Item().PaddingTop(4).EnsureSpace(200).Row(row =>
                                 {
                                     row.RelativeItem();
                                     row.ConstantItem(180).Column(c =>
@@ -247,17 +242,17 @@ namespace CarSlineAPI.Pdf
                                         if (trabajo.TotalRefacciones > 0)
                                             c.Item().Row(r =>
                                             {
-                                                r.RelativeItem().Text("Refacciones:").AlignLeft();
+                                                r.RelativeItem().Text("Refacciones:").AlignLeft().FontSize(9);
                                                 r.ConstantItem(70).AlignLeft()
-                                                    .Text($"${trabajo.TotalRefacciones:N2}").Bold();
+                                                    .Text($"${trabajo.TotalRefacciones:N2}").Bold().FontSize(9);
                                             });
 
                                         if (trabajo.CostoManoObra > 0)
                                             c.Item().PaddingTop(3).Row(r =>
                                             {
-                                                r.RelativeItem().Text("Mano de Obra:").AlignLeft();
+                                                r.RelativeItem().Text("Mano de Obra:").AlignLeft().FontSize(9);
                                                 r.ConstantItem(70).AlignLeft()
-                                                    .Text($"${trabajo.CostoManoObra:N2}").Bold();
+                                                    .Text($"${trabajo.CostoManoObra:N2}").Bold().FontSize(9);
                                             });
                                     });
                                 });
@@ -265,8 +260,8 @@ namespace CarSlineAPI.Pdf
 
                             if (!string.IsNullOrEmpty(trabajo.ComentariosTecnico))
                             {
-                                col.Item().PaddingTop(8).Background(Colors.Blue.Lighten4)
-                                    .Padding(8).Column(c =>
+                                col.Item().PaddingTop(2).Background(Colors.Blue.Lighten4)
+                                    .PaddingRight(8).PaddingTop(3).PaddingBottom(3).PaddingLeft(8).Column(c =>
                                     {
                                         c.Item().Text("Comentarios del Técnico:").FontSize(9).Bold();
                                         c.Item().Text(trabajo.ComentariosTecnico).FontSize(9);
@@ -282,51 +277,49 @@ namespace CarSlineAPI.Pdf
             container.Column(column =>
             {
                 column.Item().AlignRight().Width(250).Border(1).EnsureSpace(200)
-                    .BorderColor(Colors.Red.Darken2).Padding(10).Column(col =>
+                    .BorderColor(Colors.Red.Darken2).PaddingTop(5).PaddingBottom(5).PaddingLeft(10).PaddingRight(10).Column(col =>
                     {
-                        col.Item().Text("RESUMEN DE COSTOS").FontSize(12).Bold()
+                        col.Item().Text("RESUMEN DE COSTOS").FontSize(10).Bold()
                             .FontColor(Colors.Red.Darken2).AlignCenter();
 
-                        col.Item().PaddingTop(5).LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
-
                         col.Item().PaddingTop(5).Row(row =>
                         {
-                            row.RelativeItem().Text("Refacciones:");
+                            row.RelativeItem().Text("Refacciones:").FontSize(9);
                             row.ConstantItem(100).AlignRight()
-                                .Text($"${_orden.TotalRefacciones:N2}").Bold();
+                                .Text($"${_orden.TotalRefacciones:N2}").Bold().FontSize(9);
                         });
 
-                        col.Item().PaddingTop(5).Row(row =>
+                        col.Item().PaddingTop(3).Row(row =>
                         {
-                            row.RelativeItem().Text("Mano de Obra:");
+                            row.RelativeItem().Text("Mano de Obra:").FontSize(9);
                             row.ConstantItem(100).AlignRight()
-                                .Text($"${_orden.TotalManoObra:N2}").Bold();
+                                .Text($"${_orden.TotalManoObra:N2}").Bold().FontSize(9);
                         });
 
-                        col.Item().PaddingTop(5).LineHorizontal(1).LineColor(Colors.Black);
+                        col.Item().PaddingTop(3).LineHorizontal(1).LineColor(Colors.Black);
 
                         col.Item().PaddingTop(5).Row(row =>
                         {
-                            row.RelativeItem().Text("Subtotal:");
+                            row.RelativeItem().Text("Subtotal:").FontSize(9);
                             row.ConstantItem(100).AlignRight()
-                                .Text($"${_orden.CostoTotal:N2}").Bold();
+                                .Text($"${_orden.CostoTotal:N2}").Bold().FontSize(9);
                         });
 
                         col.Item().PaddingTop(2).Row(row =>
                         {
-                            row.RelativeItem().Text("IVA:");
+                            row.RelativeItem().Text("IVA: 16%").FontSize(9);
                             row.ConstantItem(100).AlignRight()
-                                .Text($"${_orden.CostoTotal * 0.16m:N2}").Bold();
+                                .Text($"${_orden.CostoTotal * 0.16m:N2}").Bold().FontSize(9);
                         });
 
-                        col.Item().PaddingTop(5).Background(Colors.Red.Darken2)
-                            .Padding(5).Row(row =>
+                        col.Item().PaddingTop(4).Background(Colors.Red.Darken2)
+                            .Padding(3).Row(row =>
                             {
                                 row.RelativeItem().Text("TOTAL")
-                                    .FontSize(13).Bold().FontColor(Colors.White);
+                                    .FontSize(11).Bold().FontColor(Colors.White);
                                 row.ConstantItem(100).AlignRight()
                                     .Text($"${_orden.CostoTotal_IVA:N2}")
-                                    .FontSize(14).Bold().FontColor(Colors.White);
+                                    .FontSize(11).Bold().FontColor(Colors.White);
                             });
                     });
             });
@@ -339,7 +332,7 @@ namespace CarSlineAPI.Pdf
                 if (!string.IsNullOrWhiteSpace(_orden.ObservacionesAsesor))
                 {
                     column.Item().Border(1).BorderColor(Colors.Orange.Lighten2)
-                        .Padding(10).Column(col =>
+                        .Padding(5).Column(col =>
                         {
                             col.Item().Text("OBSERVACIONES DEL ASESOR")
                                 .FontSize(10).Bold().FontColor(Colors.Orange.Darken2);
@@ -350,7 +343,7 @@ namespace CarSlineAPI.Pdf
                 if (!string.IsNullOrWhiteSpace(_orden.ObservacionesJefeTaller))
                 {
                     column.Item().PaddingTop(10).Border(1).BorderColor(Colors.Blue.Lighten2)
-                        .Padding(10).Column(col =>
+                        .Padding(5).Column(col =>
                         {
                             col.Item().Text("OBSERVACIONES DEL JEFE DE TALLER")
                                 .FontSize(10).Bold().FontColor(Colors.Blue.Darken2);

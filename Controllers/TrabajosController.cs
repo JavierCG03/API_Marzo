@@ -1090,5 +1090,61 @@ namespace CarSlineAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Obtener conteo de trabajos activos por estado para un técnico (endpoint ligero)
+        /// GET api/Trabajos/mis-trabajos/{tecnicoId}/conteo
+        /// </summary>
+        [HttpGet("mis-trabajos/{tecnicoId}/conteo")]
+        [ProducesResponseType(typeof(TrabajosActivosTecnicoDto), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ObtenerConteoTrabajosTecnico(int tecnicoId)
+        {
+            try
+            {
+                // Verificar que el técnico existe, está activo y tiene rol correcto
+                var tecnicoExiste = await _db.Usuarios
+                    .AnyAsync(u => u.Id == tecnicoId && u.Activo && u.RolId == 5);
+
+                if (!tecnicoExiste)
+                    return NotFound(new TrabajosActivosTecnicoDto
+                    {
+                        Success = false,
+                        Message = "Técnico no encontrado o no activo"
+                    });
+
+                var hoy = DateTime.Today;
+                var maniana = hoy.AddDays(1);
+
+                var conteos = await _db.TrabajosPorOrden
+                    .Where(t => t.TecnicoAsignadoId == tecnicoId && t.Activo && (
+                        new[] { 2, 5 }.Contains(t.EstadoTrabajo) ||         // Asignado / Pausado (siempre)
+                        (t.EstadoTrabajo == 4 &&                             // Finalizados solo del día
+                         t.FechaHoraTermino.HasValue &&
+                         t.FechaHoraTermino.Value >= hoy &&
+                         t.FechaHoraTermino.Value < maniana)
+                    ))
+                    .GroupBy(t => t.EstadoTrabajo)
+                    .Select(g => new { EstadoTrabajo = g.Key, Total = g.Count() })
+                    .ToListAsync();
+
+                return Ok(new TrabajosActivosTecnicoDto
+                {
+                    Success = true,
+                    Message = "Conteo obtenido exitosamente",
+                    Pendientes = conteos.FirstOrDefault(c => c.EstadoTrabajo == 2)?.Total ?? 0, // Asignado
+                    Pausados = conteos.FirstOrDefault(c => c.EstadoTrabajo == 5)?.Total ?? 0, // Pausado
+                    Finalizados = conteos.FirstOrDefault(c => c.EstadoTrabajo == 4)?.Total ?? 0  // Completado hoy
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al obtener conteo de trabajos del técnico {tecnicoId}");
+                return StatusCode(500, new TrabajosActivosTecnicoDto
+                {
+                    Success = false,
+                    Message = "Error al obtener conteo de trabajos"
+                });
+            }
+        }
+
     }
 }

@@ -1001,6 +1001,159 @@ namespace CarSlineAPI.Models.Entities
         public virtual Usuario? Tecnico { get; set; }
     }
 
+    // ============================================
+    // INVENTARIO
+    // ============================================
+
+    [Table("InventarioGeneral")]
+    public class InventarioGeneral
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required, MaxLength(50)]
+        public string NumeroParte { get; set; } = string.Empty;
+
+        [Required, MaxLength(50)]
+        public string TipoRefaccion { get; set; } = string.Empty;
+
+        [MaxLength(10)]
+        public string? Ubicacion { get; set; }
+
+        public int Cantidad { get; set; } = 0;
+
+        public int CantidadMinima { get; set; } = 0;
+
+        [Required]
+        public string UnidadMedida { get; set; } = "Pieza"; // ENUM en DB
+
+        // Navegación
+        public virtual ICollection<EntradaInventario> Entradas { get; set; } = new List<EntradaInventario>();
+        public virtual ICollection<SalidaInventario> Salidas { get; set; } = new List<SalidaInventario>();
+        public virtual ICollection<CompatibilidadRefaccion> Compatibilidades { get; set; } = new List<CompatibilidadRefaccion>();
+        public virtual ICollection<RefaccionEquivalente> Equivalentes { get; set; } = new List<RefaccionEquivalente>();
+    }
+
+
+    [Table("EntradasInventario")]
+    public class EntradaInventario
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int InventarioId { get; set; }
+
+        [Required]
+        public int AlmacenistaId { get; set; }
+
+        public int Cantidad { get; set; } = 1;
+
+        public DateTime FechaEntrada { get; set; } = DateTime.Now;
+
+        // Navegación
+        [ForeignKey("InventarioId")]
+        public virtual InventarioGeneral? Inventario { get; set; }
+
+        [ForeignKey("AlmacenistaId")]
+        public virtual Usuario? Almacenista { get; set; }
+    }
+
+
+    [Table("SalidasInventario")]
+    public class SalidaInventario
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int InventarioId { get; set; }
+
+        [Required]
+        public int AlmacenistaId { get; set; }
+
+        public int? TecnicoId { get; set; }
+
+        public int? TrabajoId { get; set; }
+
+        public int Cantidad { get; set; } = 1;
+
+        [Required]
+        public string MotivoSalida { get; set; } = "Servicio"; // ENUM en DB
+
+        public DateTime FechaSalida { get; set; } = DateTime.Now;
+
+        // Navegación
+        [ForeignKey("InventarioId")]
+        public virtual InventarioGeneral? Inventario { get; set; }
+
+        [ForeignKey("AlmacenistaId")]
+        public virtual Usuario? Almacenista { get; set; }
+
+        [ForeignKey("TecnicoId")]
+        public virtual Usuario? Tecnico { get; set; }
+
+        [ForeignKey("TrabajoId")]
+        public virtual TrabajoPorOrden? Trabajo { get; set; }
+    }
+
+
+    [Table("CompatibilidadRefacciones")]
+    public class CompatibilidadRefaccion
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int InventarioId { get; set; }
+
+        [Required, MaxLength(50)]
+        public string Marca { get; set; } = string.Empty;
+
+        [Required, MaxLength(50)]
+        public string Modelo { get; set; } = string.Empty;
+
+        [MaxLength(50)]
+        public string? Version { get; set; }
+
+        [MaxLength(20)]
+        public string? Motor { get; set; }
+
+        public int AnioInicio { get; set; }
+
+        public int AnioFin { get; set; }
+
+        [MaxLength(200)]
+        public string? Notas { get; set; }
+
+        // Navegación
+        [ForeignKey("InventarioId")]
+        public virtual InventarioGeneral? Inventario { get; set; }
+    }
+
+
+    [Table("RefaccionesEquivalentes")]
+    public class RefaccionEquivalente
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int InventarioId { get; set; }
+
+        [Required]
+        public int InventarioEquivalenteId { get; set; }
+
+        [Required]
+        public string TipoEquivalencia { get; set; } = "Aftermarket"; // ENUM en DB
+
+        // Navegación
+        [ForeignKey("InventarioId")]
+        public virtual InventarioGeneral? Inventario { get; set; }
+
+        [ForeignKey("InventarioEquivalenteId")]
+        public virtual InventarioGeneral? InventarioEquivalente { get; set; }
+    }
 }
 
 

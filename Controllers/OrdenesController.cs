@@ -226,6 +226,45 @@ namespace CarSlineAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Obtener conteo de órdenes activas por tipo (endpoint ligero)
+        /// GET api/Ordenes/activas/conteo
+        /// </summary>
+        [HttpGet("activas/conteo")]
+        [ProducesResponseType(typeof(OrdenesActivasDto), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ObtenerConteoOrdenesActivas()
+        {
+            try
+            {
+                var estadosActivos = new[] { 1, 2, 3 }; // Pendiente, En Proceso, Finalizada
+
+                var conteos = await _db.OrdenesGenerales
+                    .Where(o => o.Activo && estadosActivos.Contains(o.EstadoOrdenId))
+                    .GroupBy(o => o.TipoOrdenId)
+                    .Select(g => new { TipoOrdenId = g.Key, Total = g.Count() })
+                    .ToListAsync();
+
+                return Ok(new OrdenesActivasDto
+                {
+                    Success = true,
+                    Message = "Conteo obtenido exitosamente",
+                    Servicios = conteos.FirstOrDefault(c => c.TipoOrdenId == 1)?.Total ?? 0,
+                    Diagnosticos = conteos.FirstOrDefault(c => c.TipoOrdenId == 2)?.Total ?? 0,
+                    Reparaciones = conteos.FirstOrDefault(c => c.TipoOrdenId == 3)?.Total ?? 0,
+                    Garantias = conteos.FirstOrDefault(c => c.TipoOrdenId == 4)?.Total ?? 0
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener conteo de órdenes activas");
+                return StatusCode(500, new OrdenesActivasDto
+                {
+                    Success = false,
+                    Message = "Error al obtener conteo de órdenes activas"
+                });
+            }
+        }
+
         [HttpGet("Jefe-Taller/{tipoOrdenId}")]// Para obtener todas las ordenes generales 
         public async Task<IActionResult> ObtenerOrdenesPorTipo_Jefe(int tipoOrdenId)
         {

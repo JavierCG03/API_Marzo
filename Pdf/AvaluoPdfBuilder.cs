@@ -39,7 +39,7 @@ namespace CarSlineAPI.Pdf
                     page.Size(PageSizes.Letter);
                     page.MarginTop(15);
                     page.MarginRight(40);
-                    page.MarginBottom(30);
+                    page.MarginBottom(25);
                     page.MarginLeft(40);
                     page.PageColor(Colors.White);
                     page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
