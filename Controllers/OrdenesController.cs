@@ -227,7 +227,8 @@ namespace CarSlineAPI.Controllers
         }
 
         /// <summary>
-        /// Obtener conteo de órdenes activas por tipo (endpoint ligero)
+        /// Obtener 
+        /// de órdenes activas por tipo (endpoint ligero)
         /// GET api/Ordenes/activas/conteo
         /// </summary>
         [HttpGet("activas/conteo")]

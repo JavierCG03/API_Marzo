@@ -375,5 +375,102 @@ namespace CarSlineAPI.Controllers
                 });
             }
         }
+
+        /// <summary>
+        /// Obtener conteo de trabajos con refacciones pendientes por tipo y fecha
+        /// GET api/Ordenes/trabajos-citas/conteo-refacciones
+        /// </summary>
+        [HttpGet("trabajos-citas/conteo-refacciones")]
+        [ProducesResponseType(typeof(OrdenesActivasDto), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ObtenerConteoRefaccionesPendientes([FromQuery] DateTime? fecha = null)
+        {
+            try
+            {
+                var fechaConsulta = (fecha ?? DateTime.Today).Date;
+                var fechaSiguiente = fechaConsulta.AddDays(1);
+                var hoy = DateTime.Today;
+
+                var conteos = new List<(int TipoOrdenId, int Total)>();
+
+                if (fechaConsulta > hoy)
+                {
+                    // Fecha futura → buscar en Citas
+                    conteos = await _db.Citas
+                        .Where(c => c.Activo
+                                 && c.FechaCita >= fechaConsulta
+                                 && c.FechaCita < fechaSiguiente)
+                        .SelectMany(c => c.Trabajos.Where(t => t.Activo && !t.RefaccionesListas),
+                                    (c, t) => new { c.TipoOrdenId })
+                        .GroupBy(x => x.TipoOrdenId)
+                        .Select(g => new { TipoOrdenId = g.Key, Total = g.Count() })
+                        .ToListAsync()
+                        .ContinueWith(t => t.Result.Select(x => (x.TipoOrdenId, x.Total)).ToList());
+                }
+                else if (fechaConsulta < hoy)
+                {
+                    // Fecha pasada → buscar en Órdenes
+                    conteos = await _db.OrdenesGenerales
+                        .Where(o => o.Activo
+                                 && o.FechaCreacion >= fechaConsulta
+                                 && o.FechaCreacion < fechaSiguiente)
+                        .SelectMany(o => o.Trabajos.Where(t => t.Activo && !t.RefaccionesListas),
+                                    (o, t) => new { o.TipoOrdenId })
+                        .GroupBy(x => x.TipoOrdenId)
+                        .Select(g => new { TipoOrdenId = g.Key, Total = g.Count() })
+                        .ToListAsync()
+                        .ContinueWith(t => t.Result.Select(x => (x.TipoOrdenId, x.Total)).ToList());
+                }
+                else
+                {
+                    // Hoy → Citas activas aún no convertidas + Órdenes activas (EstadoOrdenId < 3)
+                    var conteosCitas = await _db.Citas
+                        .Where(c => c.Activo
+                                 && c.FechaCita >= fechaConsulta
+                                 && c.FechaCita < fechaSiguiente)
+                        .SelectMany(c => c.Trabajos.Where(t => t.Activo && !t.RefaccionesListas),
+                                    (c, t) => new { c.TipoOrdenId })
+                        .GroupBy(x => x.TipoOrdenId)
+                        .Select(g => new { TipoOrdenId = g.Key, Total = g.Count() })
+                        .ToListAsync();
+
+                    var conteosOrdenes = await _db.OrdenesGenerales
+                        .Where(o => o.Activo
+                                 && o.EstadoOrdenId < 3
+                                 && o.FechaCreacion >= fechaConsulta
+                                 && o.FechaCreacion < fechaSiguiente)
+                        .SelectMany(o => o.Trabajos.Where(t => t.Activo && !t.RefaccionesListas),
+                                    (o, t) => new { o.TipoOrdenId })
+                        .GroupBy(x => x.TipoOrdenId)
+                        .Select(g => new { TipoOrdenId = g.Key, Total = g.Count() })
+                        .ToListAsync();
+
+                    // Combinar sumando por TipoOrdenId
+                    conteos = conteosCitas
+                        .Concat(conteosOrdenes)
+                        .GroupBy(x => x.TipoOrdenId)
+                        .Select(g => (TipoOrdenId: g.Key, Total: g.Sum(x => x.Total)))
+                        .ToList();
+                }
+
+                return Ok(new OrdenesActivasDto
+                {
+                    Success = true,
+                    Message = "Conteo de refacciones pendientes obtenido exitosamente",
+                    Servicios = conteos.FirstOrDefault(c => c.TipoOrdenId == 1).Total,
+                    Diagnosticos = conteos.FirstOrDefault(c => c.TipoOrdenId == 2).Total,
+                    Reparaciones = conteos.FirstOrDefault(c => c.TipoOrdenId == 3).Total,
+                    Garantias = conteos.FirstOrDefault(c => c.TipoOrdenId == 4).Total
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener conteo de refacciones pendientes");
+                return StatusCode(500, new OrdenesActivasDto
+                {
+                    Success = false,
+                    Message = "Error al obtener conteo de refacciones pendientes"
+                });
+            }
+        }
     }
 }

@@ -341,14 +341,6 @@ namespace CarSlineAPI.Pdf
                     table.Cell().Padding(3);
                 });
 
-                if (!string.IsNullOrWhiteSpace(e.EquipoAdicional))
-                {
-                    column.Item().PaddingTop(3).Padding(5).Column(col =>
-                    {
-                        col.Item().Text("Equipo adicional: ").FontSize(8).Bold().FontColor(RojoOscuro);
-                        col.Item().Text(e.EquipoAdicional).FontSize(8);
-                    });
-                }
             });
         }
 
@@ -427,6 +419,22 @@ namespace CarSlineAPI.Pdf
                         }
                     }
                 });
+
+                if (!string.IsNullOrWhiteSpace(e.EquipoAdicional))
+                {
+                    column.Item().PaddingTop(3).Padding(5).Row(row =>
+                    {
+                        // El título ocupa solo lo que mide el texto
+                        row.ConstantItem(70).Text("Equipo adicional: ")
+                            .FontSize(8).Bold().FontColor(RojoOscuro)
+                            .AlignLeft();
+
+                        // El valor se coloca justo enseguida
+                        row.RelativeItem().Text(e.EquipoAdicional)
+                            .FontSize(8)
+                            .AlignLeft();
+                    });
+                }
             });
         }
 

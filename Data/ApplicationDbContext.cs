@@ -248,22 +248,21 @@ namespace CarSlineAPI.Data
             {
                 entity.ToTable("RefaccionesEquivalentes");
 
-                // UNIQUE compuesto — mismo par no puede repetirse
                 entity.HasIndex(e => new { e.InventarioId, e.InventarioEquivalenteId })
                     .IsUnique()
                     .HasDatabaseName("UQ_Equivalencia");
 
-                // FK principal
                 entity.HasOne(e => e.Inventario)
                     .WithMany(i => i.Equivalentes)
                     .HasForeignKey(e => e.InventarioId)
                     .OnDelete(DeleteBehavior.Restrict);
 
-                // FK equivalente — WithMany vacío porque no navegamos desde este lado
                 entity.HasOne(e => e.InventarioEquivalente)
                     .WithMany()
                     .HasForeignKey(e => e.InventarioEquivalenteId)
                     .OnDelete(DeleteBehavior.Restrict);
+
+                // ⭐ Ya no hay TipoEquivalencia — quitamos cualquier config de ese campo
             });
 
             modelBuilder.Entity<CompatibilidadRefaccion>(entity =>

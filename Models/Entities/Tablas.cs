@@ -1108,6 +1108,12 @@ namespace CarSlineAPI.Models.Entities
         public int InventarioId { get; set; }
 
         [Required, MaxLength(50)]
+        public string NumeroParte { get; set; } = string.Empty;
+
+        [Required, MaxLength(50)]
+        public string TipoRefaccion { get; set; } = string.Empty;
+
+        [Required, MaxLength(50)]
         public string Marca { get; set; } = string.Empty;
 
         [Required, MaxLength(50)]
@@ -1141,11 +1147,15 @@ namespace CarSlineAPI.Models.Entities
         [Required]
         public int InventarioId { get; set; }
 
+        [Required, MaxLength(50)]
+        public string NumeroParte { get; set; } = string.Empty;
+
+        [Required, MaxLength(50)]
+        public string TipoRefaccion { get; set; } = string.Empty;
+
         [Required]
         public int InventarioEquivalenteId { get; set; }
 
-        [Required]
-        public string TipoEquivalencia { get; set; } = "Aftermarket"; // ENUM en DB
 
         // Navegación
         [ForeignKey("InventarioId")]
