@@ -4,6 +4,7 @@ using CarSlineAPI.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
+
 namespace CarSlineAPI.Controllers
 {
     [Route("api/[controller]")]
@@ -68,7 +69,8 @@ namespace CarSlineAPI.Controllers
                     Anio = request.Anio,
                     Color = request.Color,
                     VIN = request.VIN.ToUpperInvariant(),
-                    Placas = request.Placas.ToUpperInvariant(),
+                    Placas = request.Placas?.ToUpperInvariant(),
+                    PlacasEdo = request.PlacasEdo,
                     Kilometraje = request.Kilometraje,
                     CuentaDeVehiculo = request.CuentaDeVehiculo,
                     PrecioSolicitado = request.PrecioSolicitado,
@@ -100,6 +102,179 @@ namespace CarSlineAPI.Controllers
                 });
             }
         }
+
+
+        // ============================================
+        // POST: api/Avaluos/Documentacion
+        // ============================================
+        /// <summary>
+        /// Registrar Documentacion del vehículo avaluado
+        /// </summary>
+        [HttpPost("Documentacion")]
+        [ProducesResponseType(typeof(CrearDocumentacionResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> RegistrarDocumentacion([FromBody] CrearDocumentacionRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new CrearDocumentacionResponse
+                {
+                    Success = false,
+                    Message = "Datos inválidos"
+                });
+
+            try
+            {
+                // Verificar que el avalúo existe
+                var avaluo = await _db.DatosAvaluos
+                    .FirstOrDefaultAsync(a => a.Id == request.AvaluoId && a.Activo);
+
+                if (avaluo == null)
+                    return NotFound(new CrearDocumentacionResponse
+                    {
+                        Success = false,
+                        Message = "Avalúo no encontrado"
+                    });
+
+                var Documentacion = new DocumentosAvaluo
+                {
+                    AvaluoId = request.AvaluoId,
+                    AsesorId = request.AsesorId,
+                    CarnetServicios = request.CarnetServicios,
+                    UltimoServicioRegistrado = request.UltimoServicioRegistrado,
+                    UltimaTenenciaPagada = request.UltimaTenenciaPagada,
+                    UltimaVerificacionPagada = request.UltimaVerificacionPagada,
+                    FacturaOriginal = request.FacturaOriginal,
+                    NumeroDuenos = request.NumeroDuenos,
+                    Refacturaciones = request.Refacturaciones,
+                    DocumentacionCompleta = request.DocumentacionCompleta,
+                    ComentariosAvaluoDocumentos = request.ComentariosAvaluoDocumentos,
+
+                };
+
+                avaluo.AvaluoDocumentos = true;
+
+                _db.DocumentosAvaluos.Add(Documentacion);
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    $"Equipamiento registrado para Avalúo ID {request.AvaluoId}");
+
+                return Ok(new CrearDocumentacionResponse
+                {
+                    Success = true,
+                    Message = "Equipamiento registrado exitosamente",
+                    DocumentacionId = Documentacion.Id
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al registrar equipamiento del avalúo {request.AvaluoId}");
+                return StatusCode(500, new CrearDocumentacionResponse
+                {
+                    Success = false,
+                    Message = "Error al registrar equipamiento"
+                });
+            }
+        }
+
+
+        // ============================================
+        // POST: api/Avaluos/AvaluoMecanico
+        // ============================================
+        /// <summary>
+        /// Registrar componentes y estado mecanico del vehiculo asi como las reparaciones necesarias para el reacondicionamiento 
+        /// </summary>
+        [HttpPost("AvaluoMecanico")]
+        [ProducesResponseType(typeof(CrearAvaluoMecanicoResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> CrearAvaluoMecacnico([FromBody] CrearAvaluoMecanicoRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new CrearAvaluoMecanicoResponse
+                {
+                    Success = false,
+                    Message = "Datos inválidos"
+                });
+            try
+            {
+
+                var avaluo = await _db.DatosAvaluos.FirstOrDefaultAsync(a => a.Id == request.AvaluoId && a.Activo);
+
+                if (avaluo == null)
+                    return NotFound(new CrearAvaluoMecanicoResponse
+                    {
+                        Success = false,
+                        Message = "Avalúo no encontrado"
+                    });
+
+                var existeAvaluoMecanico = avaluo.AvaluoMecanico;
+
+                if (existeAvaluoMecanico)
+                    return BadRequest(new CrearAvaluoMecanicoResponse
+                    {
+                        Success = false,
+                        Message = "Ya existe un Avaluo Mecanico registrado para este Vehiculo"
+                    });
+
+                var AvaluoMecanico = new AvaluoMecanico
+                {
+                    AvaluoId = request.AvaluoId,
+                    TecnicoId = request.TecnicoId,
+                    Combustible = request.Combustible,
+                    Motor = request.Motor,
+                    Turbo = request.Turbo,
+                    CantidadCilindros = request.CantidadCilindros,
+                    Transmision = request.Transmision,
+                    MarcaLlantasDelanteras =request.MarcaLlantasDelanteras,
+                    VidaUtilLlantasDelanteras =request.VidaUtilLlantasDelanteras,
+                    MarcaLlantasTraseras = request.MarcaLlantasTraseras,
+                    VidaUtilLlantasTraseras = request.VidaUtilLlantasTraseras,
+                    ComentariosAvaluoMecanico = request.ComentariosAvaluoMecanico,
+                };
+                _db.AvaluosMecanicos.Add(AvaluoMecanico);
+
+                var reparacionesGuardadas = new List<ReparacionAvaluo>();
+                foreach (var item in request.Reparaciones)
+                {
+                    var reparacion = new ReparacionAvaluo
+                    {
+                        AvaluoId = request.AvaluoId,
+                        ReparacionNecesaria = item.Reparacion,
+                        DescripcionReparacion = item.DescripcionReparacion,
+                        CostoAproximado = item.CostoAproximado
+                    };
+
+                    _db.ReparacionesAvaluos.Add(reparacion);
+                    reparacionesGuardadas.Add(reparacion);
+                }
+
+                avaluo.AvaluoMecanico = true;
+                avaluo.TecnicoId = request.TecnicoId;
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation($"Avaluo Mecanico registrado para Avalúo ID {request.AvaluoId}");
+
+                return Ok(new CrearAvaluoMecanicoResponse
+                {
+                    Success = true,
+                    Message = "Avaluo Mecanico registrado exitosamente",
+                    AvaluoMecanicoId = AvaluoMecanico.Id
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al registrar el avalúo Mecanico {request.AvaluoId}");
+                return StatusCode(500, new CrearAvaluoMecanicoResponse
+                {
+                    Success = false,
+                    Message = "Error al registrar equipamiento"
+                });
+            }
+        }
+
 
         // ============================================
         // POST: api/Avaluos/equipamiento
@@ -147,6 +322,11 @@ namespace CarSlineAPI.Controllers
                 {
                     AvaluoId = request.AvaluoId,
                     AsesorId = request.AsesorId,
+                    Herramienta = request.Herramienta,
+                    LLantaRefaccion = request.LLantaRefaccion,
+                    BirloSeguridad = request.BirloSeguridad,
+                    Manuales = request.Manuales,
+                    DuplicadoLlave = request.DuplicadoLlave,
                     ACC = request.ACC,
                     Quemacocos = request.Quemacocos,
                     EspejosElectricos = request.EspejosElectricos,
@@ -160,30 +340,17 @@ namespace CarSlineAPI.Controllers
                     ABS = request.ABS,
                     DireccionAsistida = request.DireccionAsistida,
                     BolsasAire = request.BolsasAire,
-                    TransmisionAutomatica = request.TransmisionAutomatica,
-                    TransmisionManual = request.TransmisionManual,
-                    Turbo = request.Turbo,
                     Traccion4x4 = request.Traccion4x4,
                     Bluetooth = request.Bluetooth,
                     USB = request.USB,
                     Pantalla = request.Pantalla,
                     GPS = request.GPS,
                     CantidadPuertas = request.CantidadPuertas,
+                    CantidadPasajeros = request.CantidadPasajeros,
                     Vestiduras = request.Vestiduras,
-                    Motor = request.Motor,
-                    CantidadCilindros = request.CantidadCilindros,
-                    FacturaOriginal = request.FacturaOriginal,
-                    NumeroDuenos = request.NumeroDuenos,
-                    Refacturaciones = request.Refacturaciones,
-                    UltimaTenenciaPagada = request.UltimaTenenciaPagada,
-                    Verificacion = request.Verificacion,
-                    DuplicadoLlave = request.DuplicadoLlave,
-                    CarnetServicios = request.CarnetServicios,
-                    EquipoAdicional = request.EquipoAdicional,
-                    MarcaLlantasDelanteras = request.MarcaLlantasDelanteras,
-                    VidaUtilLlantasDelanteras = request.VidaUtilLlantasDelanteras,
-                    MarcaLlantasTraseras = request.MarcaLlantasTraseras,
-                    VidaUtilLlantasTraseras = request.VidaUtilLlantasTraseras
+                    EquipoAdicional =request.EquipoAdicional,
+                    ComentariosEquimapiento = request.ComentariosEquimapiento
+
                 };
 
                 avaluo.AvaluoEquipamiento = true;
@@ -212,6 +379,7 @@ namespace CarSlineAPI.Controllers
             }
         }
 
+
         // ============================================
         // POST: api/Avaluos/reparaciones
         // ============================================
@@ -230,7 +398,6 @@ namespace CarSlineAPI.Controllers
                     Success = false,
                     Message = "Datos inválidos"
                 });
-
             try
             {
                 // Verificar que el avalúo existe
@@ -251,7 +418,6 @@ namespace CarSlineAPI.Controllers
                     var reparacion = new ReparacionAvaluo
                     {
                         AvaluoId = request.AvaluoId,
-                        TecnicoId = request.TecnicoId,
                         ReparacionNecesaria = item.Reparacion,
                         DescripcionReparacion = item.DescripcionReparacion,
                         CostoAproximado = item.CostoAproximado
@@ -260,7 +426,6 @@ namespace CarSlineAPI.Controllers
                     _db.ReparacionesAvaluos.Add(reparacion);
                     reparacionesGuardadas.Add(reparacion);
                 }
-                avaluo.AvaluoReparaciones = true;
 
                 await _db.SaveChangesAsync();
 
@@ -284,6 +449,7 @@ namespace CarSlineAPI.Controllers
                 });
             }
         }
+
 
         // ============================================
         // POST: api/Avaluos/fotos
@@ -402,6 +568,7 @@ namespace CarSlineAPI.Controllers
         [HttpGet("MisAvaluos/{UsuarioId}")]
         [ProducesResponseType(typeof(MisAvaluosResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
+
         public async Task<IActionResult> ObtenerMisAvaluos(int UsuarioId)
         {
             try
@@ -418,7 +585,8 @@ namespace CarSlineAPI.Controllers
                     VIN = o.VIN,
                     EquipamientoAvaluo = o.AvaluoEquipamiento,
                     FotosAvaluo = o.FotografiasAvaluo,
-                    ReparacionesAvaluo = o.AvaluoReparaciones,
+                    AvaluoDocumentos =o.AvaluoDocumentos,
+                    AvaluoMecanico = o.AvaluoMecanico,
                     PrecioSolicitado = o.PrecioSolicitado,
                     PrecioAutorizado = o.PrecioAutorizado
 
@@ -442,6 +610,141 @@ namespace CarSlineAPI.Controllers
                 return StatusCode(500, new { Message = "Error al obtener Avaluos" });
             }
         }
+        [HttpGet("AvaluosSinPrecio")]
+        [ProducesResponseType(typeof(MisAvaluosResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AvaluosSinPrecio()
+        {
+            try
+            {
+                var avaluos = await _db.DatosAvaluos
+                .Where(o => o.Activo && o.PrecioAutorizado == 0)
+                .OrderBy(a => a.FechaAvaluo)
+                .Select(o => new AvaluoSimpleDto
+                {
+                    Id = o.Id,
+                    Vendedor = o.NombreCompleto,
+                    VehiculoCompleto = $"{o.Marca} {o.Modelo} {o.Version} / {o.Anio}",
+                    VIN = o.VIN,
+                    EquipamientoAvaluo = o.AvaluoEquipamiento,
+                    FotosAvaluo = o.FotografiasAvaluo,
+                    AvaluoDocumentos = o.AvaluoDocumentos,
+                    AvaluoMecanico = o.AvaluoMecanico,
+                    PrecioSolicitado = o.PrecioSolicitado,
+                    PrecioAutorizado = o.PrecioAutorizado
+
+                })
+                .ToListAsync();
+
+                MisAvaluosResponse response = new MisAvaluosResponse
+                {
+                    Success = true,
+                    Message = avaluos.Count > 0
+                        ? "Avalúos obtenidos exitosamente"
+                        : "No tienes avalúos registrados",
+                    Avaluos = avaluos
+                };
+                return Ok(response);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener àvaluos");
+                return StatusCode(500, new { Message = "Error al obtener Avaluos" });
+            }
+        }
+
+        [HttpGet("AvaluosPendientes")]
+        [ProducesResponseType(typeof(MisAvaluosResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AvaluosPendientes()
+        {
+            try
+            {
+                var avaluos = await _db.DatosAvaluos
+                .Where(o => o.Activo)
+                .OrderBy(a => a.FechaAvaluo)
+                .Select(o => new AvaluoSimpleDto
+                {
+                    Id = o.Id,
+                    Vendedor = o.NombreCompleto,
+                    VehiculoCompleto = $"{o.Marca} {o.Modelo} {o.Version} / {o.Anio}",
+                    VIN = o.VIN,
+                    EquipamientoAvaluo = o.AvaluoEquipamiento,
+                    FotosAvaluo = o.FotografiasAvaluo,
+                    AvaluoDocumentos = o.AvaluoDocumentos,
+                    AvaluoMecanico = o.AvaluoMecanico,
+                    PrecioSolicitado = o.PrecioSolicitado,
+                    PrecioAutorizado = o.PrecioAutorizado
+
+                })
+                .ToListAsync();
+
+                MisAvaluosResponse response = new MisAvaluosResponse
+                {
+                    Success = true,
+                    Message = avaluos.Count > 0
+                        ? "Avalúos obtenidos exitosamente"
+                        : "No tienes avalúos registrados",
+                    Avaluos = avaluos
+                };
+                return Ok(response);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener àvaluos");
+                return StatusCode(500, new { Message = "Error al obtener Avaluos" });
+            }
+        }
+
+        [HttpGet("AvaluosInvestigacion")]
+        [ProducesResponseType(typeof(MisAvaluosResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AvaluosInvestigacion()
+        {
+            try
+            {
+                var avaluos = await _db.DatosAvaluos
+                .Where(o => o.Activo 
+                 && o.VehiculoTomadoRevision == true)
+                .OrderBy(a => a.FechaAvaluo)
+                .Select(o => new AvaluoSimpleDto
+                {
+                    Id = o.Id,
+                    Vendedor = o.NombreCompleto,
+                    VehiculoCompleto = $"{o.Marca} {o.Modelo} {o.Version} / {o.Anio}",
+                    VIN = o.VIN,
+                    EquipamientoAvaluo = o.AvaluoEquipamiento,
+                    FotosAvaluo = o.FotografiasAvaluo,
+                    AvaluoDocumentos = o.AvaluoDocumentos,
+                    AvaluoMecanico = o.AvaluoMecanico,
+                    PrecioSolicitado = o.PrecioSolicitado,
+                    PrecioAutorizado = o.PrecioAutorizado
+
+                })
+                .ToListAsync();
+
+                MisAvaluosResponse response = new MisAvaluosResponse
+                {
+                    Success = true,
+                    Message = avaluos.Count > 0
+                        ? "Avalúos obtenidos exitosamente"
+                        : "No tienes avalúos registrados",
+                    Avaluos = avaluos
+                };
+                return Ok(response);
+
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener àvaluos");
+                return StatusCode(500, new { Message = "Error al obtener Avaluos" });
+            }
+        }
+
+
+
         [HttpGet("DatosSimpelesAvaluo/{id}")]
         [ProducesResponseType(typeof(AvaluoDatosSimplesResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -496,8 +799,8 @@ namespace CarSlineAPI.Controllers
             try
             {
                 var baseAvaluo = await _db.DatosAvaluos
-                    .Where(a => a.Id == id && a.Activo)
-                    .Select(a => new { a.Id, a.AvaluoEquipamiento, a.AvaluoReparaciones })
+                    .Where(a => a.Id == id )//& a.Activo)
+                    .Select(a => new { a.Id, a.AvaluoEquipamiento, a.AvaluoMecanico, a.AvaluoDocumentos})
 
                     .FirstOrDefaultAsync();
                 if (baseAvaluo == null)
@@ -508,28 +811,37 @@ namespace CarSlineAPI.Controllers
                         Message = "Avalúo no encontrado"
                     });
 
-                var query = _db.DatosAvaluos.Where(a => a.Id == id && a.Activo);
+                var query = _db.DatosAvaluos.Where(a => a.Id == id);//&& a.Activo);
 
                 if (baseAvaluo.AvaluoEquipamiento)
                     query = query.Include(a => a.Equipamiento);
 
-                if (baseAvaluo.AvaluoReparaciones)
+                if (baseAvaluo.AvaluoMecanico)
+                {
                     query = query.Include(a => a.Reparaciones);
+                    query = query.Include(a => a.MecanicoAvaluo);
 
+                }
+                if (baseAvaluo.AvaluoDocumentos)
+                {
+                    query = query.Include(a => a.Documentos);
+                }
+
+                query = query.Include(a => a.Tecnico);
                 query = query.Include(a => a.Asesor);
 
                 var avaluo = await query.FirstOrDefaultAsync();
-
 
                 return Ok(new
                 {
                     Success = true,
                     Message = "Avalúo encontrado",
                     AvaluoId = avaluo.Id,
-                    Avaluo = MapearAvaluoDto(avaluo, avaluo.Asesor?.NombreCompleto ?? ""),
+                    Avaluo = MapearAvaluoDto(avaluo, avaluo.Asesor?.NombreCompleto ?? "", avaluo.Tecnico?.NombreCompleto ?? ""),
+                    
                     Equipamiento = avaluo.AvaluoEquipamiento == true && avaluo.Equipamiento != null
                         ? MapearEquipamientoDto(avaluo.Equipamiento) : null,
-                    Reparaciones = avaluo.AvaluoReparaciones == true && avaluo.Reparaciones != null
+                    Reparaciones = avaluo.AvaluoMecanico == true && avaluo.Reparaciones != null
                         ? avaluo.Reparaciones.Select(r => new ReparacionDto
                         {
                             Id = r.Id,
@@ -539,7 +851,11 @@ namespace CarSlineAPI.Controllers
                             : r.DescripcionReparacion,
                             CostoAproximado = r.CostoAproximado
                         }).ToList()
-                        :null
+                        :null,
+                    AvaluoMecanico =avaluo.AvaluoMecanico == true && avaluo.MecanicoAvaluo != null
+                        ? MapearAvaluoMecanico(avaluo.MecanicoAvaluo) : null,
+                    Documentacion = avaluo.AvaluoDocumentos ==true  && avaluo.Documentos !=null
+                        ? MapearDocumentosAvaluo (avaluo.Documentos) : null,
                 });
             }
             catch (Exception ex)
@@ -554,15 +870,15 @@ namespace CarSlineAPI.Controllers
         }
 
         // ============================================
-        // PUT: api/Avaluos/autorizar/{id}
+        // PUT: api/Avaluos/TratarPrecio/{id}
         // ============================================
         /// <summary>
-        /// Autorizar precio del avalúo
+        /// Tratar precio del avalúo no podra superar el valor autorizado
         /// </summary>
-        [HttpPut("autorizar/{id}")]
+        [HttpPut("TratarPrecio/{id}")]
         [ProducesResponseType(typeof(CrearAvaluoResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
-        public async Task<IActionResult> AutorizarAvaluo(int id, [FromBody] AutorizarAvaluoRequest request)
+        public async Task<IActionResult> TratarPrecioAvaluo(int id, [FromBody] AutorizarAvaluoRequest request)
         {
             if (!ModelState.IsValid)
                 return BadRequest(new CrearAvaluoResponse { Success = false, Message = "Datos inválidos" });
@@ -580,8 +896,20 @@ namespace CarSlineAPI.Controllers
                         Message = "Avalúo no encontrado"
                     });
 
-                avaluo.PrecioAutorizado = request.PrecioAutorizado;
-                avaluo.VehiculoApto = request.VehiculoApto;
+                if (avaluo.PrecioAutorizado == 0)
+                {
+                    avaluo.PrecioTratado = request.PrecioAutorizado;
+                }
+                else
+                {
+                    if (request.PrecioAutorizado > avaluo.PrecioAutorizado)
+                    return BadRequest(new CrearAvaluoResponse
+                    {
+                        Success = false,
+                        Message = "El precio Tratado no puede ser mayor al precio autorizado"
+                    });
+                }
+                avaluo.PrecioTratado = request.PrecioAutorizado;
 
                 await _db.SaveChangesAsync();
 
@@ -602,6 +930,112 @@ namespace CarSlineAPI.Controllers
                 {
                     Success = false,
                     Message = "Error al autorizar avalúo"
+                });
+            }
+        }
+
+
+        // ============================================
+        // PUT: api/Avaluos/autorizar/{id}
+        // ============================================
+        /// <summary>
+        /// Autorizar precio del avalúo
+        /// </summary>
+        [HttpPut("autorizar/{id}")]
+        [ProducesResponseType(typeof(CrearAvaluoResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> AutorizarAvaluo(int id, [FromBody] AutorizarAvaluoRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new CrearAvaluoResponse { Success = false, Message = "Datos inválidos" });
+
+            try
+            {
+                var avaluo = await _db.DatosAvaluos
+                    .FirstOrDefaultAsync(a => a.Id == id && a.Activo);
+
+                if (avaluo == null)
+                    return NotFound(new CrearAvaluoResponse
+                    {
+                        Success = false,
+                        Message = "Avalúo no encontrado"
+                    });
+
+                if(avaluo.PrecioTratado >request.PrecioAutorizado)
+                {
+                    avaluo.PrecioTratado = request.PrecioAutorizado;
+                }
+
+                avaluo.PrecioAutorizado = request.PrecioAutorizado;
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    $"Avalúo {id} autorizado - Precio: ${request.PrecioAutorizado:N2}");
+
+                return Ok(new CrearAvaluoResponse
+                {
+                    Success = true,
+                    Message = "Avalúo autorizado exitosamente",
+                    AvaluoId = avaluo.Id,
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al autorizar avalúo {id}");
+                return StatusCode(500, new CrearAvaluoResponse
+                {
+                    Success = false,
+                    Message = "Error al autorizar avalúo"
+                });
+            }
+        }
+
+        // ============================================
+        // PUT: api/Avaluos/CancelarAvaluo/{id}
+        // ============================================
+        /// <summary>
+        /// Autorizar precio del avalúo
+        /// </summary>
+        [HttpPut("CancelarAvaluo/{id}")]
+        [ProducesResponseType(typeof(CrearAvaluoResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> CancelarAvaluo(int id, [FromBody] CancelarAvaluoRequest request)
+        {
+            try
+            {
+                var avaluo = await _db.DatosAvaluos
+                    .FirstOrDefaultAsync(a => a.Id == id && a.Activo);
+
+                if (avaluo == null)
+                    return NotFound(new CrearAvaluoResponse
+                    {
+                        Success = false,
+                        Message = "Avalúo no encontrado"
+                    });
+                avaluo.Activo = false;
+                avaluo.VehiculoApto = request.VehiculoApto;
+                avaluo.ComentariosCancelacion = request.MotivoCancelacion;
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    $"Avalúo {avaluo.Marca} {avaluo.Modelo} Cancelado");
+
+                return Ok(new CrearAvaluoResponse
+                {
+                    Success = true,
+                    Message = "Avalúo cancelado exitosamente",
+                    AvaluoId = avaluo.Id,
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al Cancelar avalúo {id}");
+                return StatusCode(500, new CrearAvaluoResponse
+                {
+                    Success = false,
+                    Message = "Error al cancelar avalúo"
                 });
             }
         }
@@ -637,43 +1071,244 @@ namespace CarSlineAPI.Controllers
 
             return File(imagen, mimeType);
         }
-        /*
+
         // ============================================
-        // DELETE: api/Avaluos/reparacion/{id}
+        // GET: api/Avaluos/Evidencias/{AvaluoId}
         // ============================================
         /// <summary>
-        /// Eliminar reparación de un avalúo
+        /// Obtener todas las imagenes de un avalúo 
         /// </summary>
-        [HttpDelete("reparacion/{id}")]
-        public async Task<IActionResult> EliminarReparacion(int id)
+
+        [HttpGet("Evidencias/{avaluoId}")]
+        public async Task<ActionResult<IEnumerable<EvidenciaDto>>> GetEvidenciasPorOrden(int avaluoId)
         {
+            var evidencias = await _db.Set<AvaluoFoto>()
+                .Where(e => e.AvaluoId == avaluoId)
+                .OrderBy(e => e.Fecha)
+                .Select(e => new EvidenciaDto
+                {
+                    Id = e.Id,
+                    OrdenGeneralId = e.AvaluoId,
+                    RutaImagen = e.RutaFoto ?? string.Empty,
+                    Descripcion = e.TipoFoto ?? string.Empty,
+                    FechaRegistro = e.Fecha,
+                    Activo = true 
+                })
+                .ToListAsync();
+
+            if (!evidencias.Any())
+            {
+                return NotFound($"No se encontraron evidencias para el avaluo {avaluoId}");
+            }
+
+            return Ok(evidencias);
+        }
+
+        // ============================================
+        // GET: api/Avaluos/Estadisticas
+        // ============================================
+        /// <summary>
+        /// Obtener estadísticas de avalúos en un rango de fechas, incluye asesores sin avalúos
+        /// </summary>
+        [HttpGet("Estadisticas")]
+        [ProducesResponseType(typeof(EstadisticasComprasResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        public async Task<IActionResult> ObtenerEstadisticas(
+            [FromQuery] DateTime fechaInicio,
+            [FromQuery] DateTime fechaFin)
+        {
+            if (fechaInicio > fechaFin)
+                return BadRequest(new EstadisticasComprasResponse
+                {
+                    Success = false,
+                    Message = "La fecha de inicio no puede ser mayor a la fecha de fin"
+                });
+
             try
             {
-                var reparacion = await _db.ReparacionesAvaluos.FindAsync(id);
+                var fechaFinDia = fechaFin.Date.AddDays(1).AddTicks(-1);
 
-                if (reparacion == null)
-                    return NotFound(new { Success = false, Message = "Reparación no encontrada" });
+                // Traer todos los asesores de compras activos (RolId == 8)
+                var asesoresCompras = await _db.Usuarios
+                    .Where(u => u.RolId == 8 && u.Activo)
+                    .ToListAsync();
 
-                _db.ReparacionesAvaluos.Remove(reparacion);
-                await _db.SaveChangesAsync();
+                // Traer avalúos en el rango de fechas
+                var avaluos = await _db.DatosAvaluos
+                    .Where(a => a.FechaAvaluo >= fechaInicio.Date
+                             && a.FechaAvaluo <= fechaFinDia)
+                    .ToListAsync();
 
-                return Ok(new { Success = true, Message = "Reparación eliminada exitosamente" });
+                // Estadísticas globales
+                int avaluosRealizados = avaluos.Count;
+                int tomasConcretadas = avaluos.Count(a => a.VehiculoComprado);
+                int avaluosCancelados = avaluos.Count(a => !a.Activo);
+                int avaluosPendientes = avaluos.Count(a => a.Activo && !a.VehiculoComprado);
+
+                // Agrupar avalúos por asesor en memoria
+                var avaluosPorAsesor = avaluos
+                    .GroupBy(a => a.AsesorId)
+                    .ToDictionary(g => g.Key, g => g.ToList());
+
+                // Cruzar todos los asesores con sus avalúos (Left Join en memoria)
+                var compradores = asesoresCompras
+                    .Select(asesor =>
+                    {
+                        var avaluosAsesor = avaluosPorAsesor.TryGetValue(asesor.Id, out var lista)
+                            ? lista
+                            : new List<DatosAvaluo>();
+
+                        return new EstadisticasCompradorDTO
+                        {
+                            AsesorCompras = asesor.NombreCompleto,
+                            AsesorId = asesor.Id,
+                            AvaluoRealizados = avaluosAsesor.Count,
+                            TomasConcretadas = avaluosAsesor.Count(a => a.VehiculoComprado),
+                            AvaluosCancelados = avaluosAsesor.Count(a => !a.Activo),
+                            AvaluosPendientes = avaluosAsesor.Count(a => a.Activo && !a.VehiculoComprado),
+                        };
+                    })
+                    .OrderByDescending(e => e.TomasConcretadas)
+                    .ThenBy(e => e.AsesorCompras)
+                    .ToList();
+
+                return Ok(new EstadisticasComprasResponse
+                {
+                    Success = true,
+                    Message = $"Estadísticas del {fechaInicio:dd/MM/yyyy} al {fechaFin:dd/MM/yyyy}",
+                    AvaluoRealizados =avaluosRealizados,
+                    TomasConcretadas = tomasConcretadas,
+                    AvaluosCancelados = avaluosCancelados,
+                    AvaluosPendientes = avaluosPendientes,
+                    Compradores = compradores
+                });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al eliminar reparación {id}");
-                return StatusCode(500, new { Success = false, Message = "Error al eliminar reparación" });
+                _logger.LogError(ex, "Error al obtener estadísticas de avalúos");
+                return StatusCode(500, new EstadisticasComprasResponse
+                {
+                    Success = false,
+                    Message = "Error al obtener estadísticas"
+                });
             }
-        }*/
+        }
+
 
         // ============================================
-        // MÉTODOS PRIVADOS
+        // GET: api/Avaluos/DetallesCompras
         // ============================================
+        /// <summary>
+        /// Obtener detalle de avalúos filtrados por asesor, rango de fechas y tipo
+        /// </summary>
+        [HttpGet("DetallesCompras")]
+        [ProducesResponseType(typeof(DetallesComprasResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ObtenerDetallesCompras([FromQuery] DetallesComprasRequest request)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(new DetallesComprasResponse
+                {
+                    Success = false,
+                    Message = "Datos inválidos: " + string.Join(", ", ModelState.Values
+                        .SelectMany(v => v.Errors).Select(e => e.ErrorMessage))
+                });
 
-        private static AvaluoDto MapearAvaluoDto(DatosAvaluo a, string asesorNombre) => new()
+            if (request.FechaInicio > request.FechaFin)
+                return BadRequest(new DetallesComprasResponse
+                {
+                    Success = false,
+                    Message = "La fecha de inicio no puede ser mayor a la fecha de fin"
+                });
+
+            try
+            {
+
+                Usuario? asesor = null;
+
+                if (request.AsesorId != 0)
+                {
+                    asesor = await _db.Usuarios
+                        .FirstOrDefaultAsync(u => u.Id == request.AsesorId && u.RolId == 8 && u.Activo);
+
+                    if (asesor == null)
+                        return NotFound(new DetallesComprasResponse
+                        {
+                            Success = false,
+                            Message = "Asesor de compras no encontrado o no activo"
+                        });
+                }
+
+                var fechaFinDia = request.FechaFin.Date.AddDays(1).AddTicks(-1);
+
+                var query = _db.DatosAvaluos
+                    .Where(a =>
+                        a.FechaAvaluo >= request.FechaInicio.Date &&
+                        a.FechaAvaluo <= fechaFinDia
+                    );
+                if (request.AsesorId != 0)
+                {
+                    query = query.Where(a => a.AsesorId == request.AsesorId);
+                }
+                // Filtrar según tipo de avalúo
+                query = request.TipoAvaluo.ToLower() switch
+                {
+                    "concretado" => query.Where(a => a.VehiculoComprado),
+                    "cancelado" => query.Where(a => !a.Activo),
+                    "pendiente" => query.Where(a => a.Activo && !a.VehiculoComprado),
+                    _ => query
+                };
+
+                var avaluos = await query
+                    .OrderByDescending(a => a.FechaAvaluo)
+                    .Select(a => new AvaluoDetalleAvaluoIdResponse
+                    {
+                        AvaluoId = a.Id,
+                        Vendedor = a.NombreCompleto,
+                        VehiculoCompleto = $"{a.Marca} {a.Modelo} {a.Version} / {a.Anio}",
+                        VIN = a.VIN,
+                    })
+                    .ToListAsync();
+
+                // Etiqueta legible del tipo
+                var tipoLabel = request.TipoAvaluo.ToLower() switch
+                {
+                    "concretado" => "Tomas Concretadas",
+                    "cancelado" => "Avalúos Cancelados",
+                    "pendiente" => "Avalúos Pendientes",
+                    _ => request.TipoAvaluo
+                };
+
+                return Ok(new DetallesComprasResponse
+                {
+                    Success = true,
+                    Message = avaluos.Count > 0
+                                        ? $"Se encontraron {avaluos.Count} avalúo(s)"
+                                        : "No se encontraron avalúos con los filtros indicados",
+                    AsesorCompras = request.AsesorId == 0
+                        ? "Todos los asesores"
+                        : asesor.NombreCompleto,
+                    TipodeAvaluos = tipoLabel,
+                    Avaluos = avaluos!
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener detalles de compras");
+                return StatusCode(500, new DetallesComprasResponse
+                {
+                    Success = false,
+                    Message = "Error al obtener detalles de compras"
+                });
+            }
+        }
+
+        private static AvaluoDto MapearAvaluoDto(DatosAvaluo a, string asesorNombre, string tecnicoNombre) => new()
         {
             Id = a.Id,
             AsesorNombre = asesorNombre,
+            TecnicoNombre = tecnicoNombre,
             NombreCompleto = a.NombreCompleto,
             TipoCliente = a.TipoCliente,
             Telefono1 = a.Telefono1,
@@ -685,23 +1320,57 @@ namespace CarSlineAPI.Controllers
             Color = a.Color,
             VIN = a.VIN,
             Placas = a.Placas,
+            PlacasEdo = a.PlacasEdo,
             Kilometraje = a.Kilometraje,
             CuentaDeVehiculo = a.CuentaDeVehiculo,
             PrecioSolicitado = a.PrecioSolicitado,
+            PrecioTratado = a.PrecioTratado,
             CostoAproximadoReacondicionamiento = a.CostoAproximadoReacondicionamiento,
             FechaAvaluo = a.FechaAvaluo,
-            BajaPlacas = a.BajaPlacas,
             Fotografias =a.FotografiasAvaluo,
             VehiculoApto = a.VehiculoApto,
             PrecioAutorizado = a.PrecioAutorizado,
             VehiculoTomadoRevision = a.VehiculoTomadoRevision,
-            VehiculoComprado = a.VehiculoComprado
+            VehiculoComprado = a.VehiculoComprado,
+            ComentariosCancelacion = a.ComentariosCancelacion,
+        };
+        private static AvaluoMecanicoDto MapearAvaluoMecanico(AvaluoMecanico a) => new()
+        {
+            Id = a.Id,
+            Combustible = a.Combustible,
+            Motor = a.Motor,
+            Turbo = a.Turbo,
+            CantidadCilindros = a.CantidadCilindros,
+            Transmision = a.Transmision,
+            MarcaLlantasDelanteras = a.MarcaLlantasDelanteras,
+            VidaUtilLlantasDelanteras = a.VidaUtilLlantasDelanteras,
+            MarcaLlantasTraseras = a.MarcaLlantasTraseras,
+            VidaUtilLlantasTraseras = a.VidaUtilLlantasTraseras,
+            ComentariosAvaluoMecanico = a.ComentariosAvaluoMecanico,
+        };
+        private static AvaluoDocumentosDto MapearDocumentosAvaluo(DocumentosAvaluo a) => new()
+        {
+            Id = a.Id,
+            CarnetServicios = a.CarnetServicios,
+            UltimoServicioRegistrado = a.UltimoServicioRegistrado,
+            UltimaTenenciaPagada = a.UltimaTenenciaPagada,
+            UltimaVerificacionPagada = a.UltimaVerificacionPagada,
+            FacturaOriginal = a.FacturaOriginal,
+            NumeroDuenos = a.NumeroDuenos,
+            Refacturaciones = a.Refacturaciones,
+            DocumentacionCompleta = a.DocumentacionCompleta,
+            ComentariosAvaluoDocumentos = a.ComentariosAvaluoDocumentos,
         };
 
         private static EquipamientoDto MapearEquipamientoDto(EquipamientoAvaluo e) => new()
         {
             Id = e.Id,
             AvaluoId = e.AvaluoId,
+            Herramienta = e.Herramienta,
+            LLantaRefaccion = e.LLantaRefaccion,
+            BirloSeguridad = e.BirloSeguridad,
+            Manuales = e.Manuales,
+            DuplicadoLlave = e.DuplicadoLlave,
             ACC = e.ACC,
             Quemacocos = e.Quemacocos,
             EspejosElectricos = e.EspejosElectricos,
@@ -715,30 +1384,16 @@ namespace CarSlineAPI.Controllers
             ABS = e.ABS,
             DireccionAsistida = e.DireccionAsistida,
             BolsasAire = e.BolsasAire,
-            TransmisionAutomatica = e.TransmisionAutomatica,
-            TransmisionManual = e.TransmisionManual,
-            Turbo = e.Turbo,
             Traccion4x4 = e.Traccion4x4,
             Bluetooth = e.Bluetooth,
             USB = e.USB,
             Pantalla = e.Pantalla,
             GPS = e.GPS,
             CantidadPuertas = e.CantidadPuertas,
+            CantidadPasajeros = e.CantidadPasajeros,
             Vestiduras = e.Vestiduras,
-            Motor = e.Motor,
-            CantidadCilindros = e.CantidadCilindros,
-            FacturaOriginal = e.FacturaOriginal,
-            NumeroDuenos = e.NumeroDuenos,
-            Refacturaciones = e.Refacturaciones,
-            UltimaTenenciaPagada = e.UltimaTenenciaPagada,
-            Verificacion = e.Verificacion,
-            DuplicadoLlave = e.DuplicadoLlave,
-            CarnetServicios = e.CarnetServicios,
             EquipoAdicional = e.EquipoAdicional,
-            MarcaLlantasDelanteras = e.MarcaLlantasDelanteras,
-            VidaUtilLlantasDelanteras = e.VidaUtilLlantasDelanteras,
-            MarcaLlantasTraseras = e.MarcaLlantasTraseras,
-            VidaUtilLlantasTraseras = e.VidaUtilLlantasTraseras
+            ComentariosEquipamiento = e.ComentariosEquimapiento,
         };
 
         private static string LimpiarNombreArchivo(string nombre)

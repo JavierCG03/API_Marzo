@@ -29,7 +29,6 @@ namespace CarSlineAPI.Models.DTOs
         public string Password { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "El rol es requerido")]
-        [Range(2, 10, ErrorMessage = "El rol debe ser entre 2 y 10 (no puede crear administradores)")]
         public int RolId { get; set; }
     }
 

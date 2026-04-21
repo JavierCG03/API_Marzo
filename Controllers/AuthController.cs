@@ -142,6 +142,13 @@ namespace CarSlineAPI.Controllers
             var usuarios = await _authService.ObtenerUsuariosPorRol(5);
             return Ok(usuarios);
         }
+        [HttpGet("Compradores")]
+        [ProducesResponseType(typeof(List<UsuarioDto>), StatusCodes.Status200OK)]
+        public async Task<ActionResult<List<UsuarioDto>>> ObtenerCompradores()
+        {
+            var usuarios = await _authService.ObtenerUsuariosPorRol(8);
+            return Ok(usuarios);
+        }
 
         /// <summary>
         /// Verificar estado de la API

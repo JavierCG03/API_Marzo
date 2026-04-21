@@ -1,9 +1,8 @@
 ﻿using CarSlineAPI.Models.DTOs;
-using CarSlineAPI.Models.Entities;
-using Mysqlx.Crud;
 using QuestPDF.Fluent;
 using QuestPDF.Helpers;
 using QuestPDF.Infrastructure;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace CarSlineAPI.Pdf
 {
@@ -96,7 +95,8 @@ namespace CarSlineAPI.Pdf
                 column.Item().Element(SeccionVendedorVehiculo);
 
                 // 2. Documentación
-                column.Item().PaddingTop(6).Element(SeccionDocumentacion);
+                if (_data.Documentos != null)
+                    column.Item().PaddingTop(6).Element(SeccionDocumentacion);
 
                 // 3. Equipamiento (checklist)
                 if (_data.Equipamiento != null)
@@ -126,8 +126,9 @@ namespace CarSlineAPI.Pdf
         private void SeccionVendedorVehiculo(IContainer container)
         {
             var a = _data.Avaluo!;
-            var e = _data.Equipamiento;
+            var m = _data.AvaluoMecanico;
 
+            var e = _data.Equipamiento;
             container.Column(column =>
             {
                 // --- VENDEDOR ---
@@ -137,7 +138,7 @@ namespace CarSlineAPI.Pdf
                     col.Item().PaddingTop(3).Row(row =>
                     {
                         // 📌 Nombre (más grande)
-                        row.ConstantItem(190).Text(txt =>
+                        row.ConstantItem(220).Text(txt =>
                         {
                             txt.Span("Nombre: ").FontSize(9).FontColor(Colors.Grey.Darken2);
                             txt.Span(a.NombreCompleto).FontSize(9).Bold();
@@ -215,48 +216,94 @@ namespace CarSlineAPI.Pdf
                             txt.Span("Kilometraje: ").FontSize(8).FontColor(Colors.Grey.Darken2);
                             txt.Span($"{a.Kilometraje:N0} Km").FontSize(8).Bold();
                         });
-                        row.RelativeItem().Text(txt =>
-                        {
-                            txt.Span("Placas: ").FontSize(8).FontColor(Colors.Grey.Darken2);
-                            txt.Span(string.IsNullOrWhiteSpace(a.Placas) ? "S/P" : a.Placas).FontSize(8).Bold();
-                        });
+
                         row.RelativeItem().Text(txt =>
                         {
                             txt.Span("VIN: ").FontSize(8).FontColor(Colors.Grey.Darken2);
                             txt.Span(a.VIN).FontSize(8).Bold();
                         });
+
+                        row.RelativeItem().Text(txt =>
+                        {
+                            if (!string.IsNullOrWhiteSpace(a.PlacasEdo))
+                            {
+                                txt.Span($"Placas {a.PlacasEdo}: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                            }
+
+                            txt.Span(string.IsNullOrWhiteSpace(a.Placas) ? "S/P" : a.Placas).FontSize(8).Bold();
+                        });
+
                     });
 
-                    // Fila 3+: Equipamiento si existe
-                    if (e != null)
+                    // Fila 2+: Avaluo Mecanico si existe
+                    if (m != null)
                     {
                         col.Item().PaddingTop(2).Row(row =>
                         {
                             row.RelativeItem().Text(txt =>
                             {
                                 txt.Span("Motor: ").FontSize(8).FontColor(Colors.Grey.Darken2);
-                                txt.Span(e.Motor).FontSize(8).Bold();
+                                if (m.Turbo)
+                                {
+                                    txt.Span($"{m.Motor} Turbo").FontSize(8).Bold();
+
+                                }
+                                else
+                                {
+                                    txt.Span(m.Motor).FontSize(8).Bold();
+                                }
+                                
                             });
                             row.RelativeItem().Text(txt =>
                             {
                                 txt.Span("Cilindros: ").FontSize(8).FontColor(Colors.Grey.Darken2);
-                                txt.Span(e.CantidadCilindros.ToString()).FontSize(8).Bold();
+                                txt.Span(m.CantidadCilindros.ToString()).FontSize(8).Bold();
+                            });
+
+                            row.RelativeItem().Text(txt =>
+                            {
+                                txt.Span("Llantas Del.: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                                txt.Span(m.MarcaLlantasDelanteras).FontSize(8).Bold();
+                                if (m.VidaUtilLlantasDelanteras.HasValue)
+                                    txt.Span($" ({m.VidaUtilLlantasDelanteras}%)").FontSize(8);
                             });
                             row.RelativeItem().Text(txt =>
                             {
-                                txt.Span("Puertas: ").FontSize(8).FontColor(Colors.Grey.Darken2);
-                                txt.Span(e.CantidadPuertas.ToString()).FontSize(8).Bold();
-                            });
-                            row.RelativeItem().Text(txt =>
-                            {
-                                txt.Span("Transmisión: ").FontSize(8).FontColor(Colors.Grey.Darken2);
-                                txt.Span(e.TransmisionAutomatica ? "Automática" :
-                                         e.TransmisionManual ? "Manual" : "—").FontSize(8).Bold();
+                                txt.Span("Llantas Tras.: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                                txt.Span(m.MarcaLlantasTraseras).FontSize(8).Bold();
+                                if (m.VidaUtilLlantasTraseras.HasValue)
+                                    txt.Span($" ({m.VidaUtilLlantasTraseras}%)").FontSize(8);
                             });
                         });
 
+                    }
+
+                    // Fila 3+: Equipamiento si existe
+                    if (m!= null && e == null)
+                    {
+
                         col.Item().PaddingTop(2).Row(row =>
                         {
+
+                            row.RelativeItem().Text(txt =>
+                            {
+                                txt.Span("Transmisión: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                                txt.Span(m.Transmision).FontSize(8).Bold();
+                            });
+
+                                row.RelativeItem();
+                                row.RelativeItem();
+                                row.RelativeItem();
+                        });
+
+                    }
+
+                    if (e != null && m == null)
+                    {
+
+                        col.Item().PaddingTop(2).Row(row =>
+                        {
+
                             row.RelativeItem().Text(txt =>
                             {
                                 txt.Span("Vestiduras: ").FontSize(8).FontColor(Colors.Grey.Darken2);
@@ -264,30 +311,60 @@ namespace CarSlineAPI.Pdf
                             });
                             row.RelativeItem().Text(txt =>
                             {
-                                txt.Span("Llantas Del.: ").FontSize(8).FontColor(Colors.Grey.Darken2);
-                                txt.Span(e.MarcaLlantasDelanteras).FontSize(8).Bold();
-                                if (e.VidaUtilLlantasDelanteras.HasValue)
-                                    txt.Span($" ({e.VidaUtilLlantasDelanteras}%)").FontSize(8);
+                                txt.Span("Pasajeros: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                                txt.Span(e.CantidadPasajeros.ToString()).FontSize(8).Bold();
                             });
                             row.RelativeItem().Text(txt =>
                             {
-                                txt.Span("Llantas Tras.: ").FontSize(8).FontColor(Colors.Grey.Darken2);
-                                txt.Span(e.MarcaLlantasTraseras).FontSize(8).Bold();
-                                if (e.VidaUtilLlantasTraseras.HasValue)
-                                    txt.Span($" ({e.VidaUtilLlantasTraseras}%)").FontSize(8);
+                                txt.Span("Puertas: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                                txt.Span(e.CantidadPuertas.ToString()).FontSize(8).Bold();
                             });
-                            row.RelativeItem(); 
+
+                            row.RelativeItem();
                         });
 
-                        if (!string.IsNullOrWhiteSpace(a.CuentaDeVehiculo) && a.CuentaDeVehiculo != "No Aplica")
-                        {
-                            col.Item().PaddingTop(3)
-                                .Background(Colors.Orange.Lighten4).Padding(3)
-                                .Text($"⚠ A Cuenta de : {a.CuentaDeVehiculo}")
-                                .FontSize(7.5f).Bold().FontColor(Colors.Orange.Darken2);
-                        }
                     }
+
+                    if (e != null && m != null)
+                    {
+
+                        col.Item().PaddingTop(2).Row(row =>
+                        {
+
+                                row.RelativeItem().Text(txt =>
+                                {
+                                    txt.Span("Transmisión: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                                    txt.Span(m.Transmision).FontSize(8).Bold();
+                                });
+                                row.RelativeItem().Text(txt =>
+                                {
+                                    txt.Span("Vestiduras: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                                    txt.Span(e.Vestiduras).FontSize(8).Bold();
+                                });
+                                row.RelativeItem().Text(txt =>
+                                {
+                                    txt.Span("Pasajeros: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                                    txt.Span(e.CantidadPasajeros.ToString()).FontSize(8).Bold();
+                                });
+                                row.RelativeItem().Text(txt =>
+                                {
+                                    txt.Span("Puertas: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                                    txt.Span(e.CantidadPuertas.ToString()).FontSize(8).Bold();
+                                });
+                        });
+
+                    }
+
+
                 });
+
+                if (!string.IsNullOrWhiteSpace(a.CuentaDeVehiculo) && a.CuentaDeVehiculo != "No Aplica")
+                {
+                    column.Item().PaddingTop(3)
+                        .Background(Colors.Orange.Lighten4).Padding(3)
+                        .Text($"⚠ A Cuenta de : {a.CuentaDeVehiculo}")
+                        .FontSize(7.5f).Bold().FontColor(Colors.Orange.Darken2);
+                }
             });
         }
 
@@ -297,8 +374,7 @@ namespace CarSlineAPI.Pdf
 
         private void SeccionDocumentacion(IContainer container)
         {
-            var e = _data.Equipamiento;
-            if (e == null) return;
+            var d = _data.Documentos;
 
             container.Column(column =>
             {
@@ -322,24 +398,39 @@ namespace CarSlineAPI.Pdf
                     });
 
                     // Fila 1: Factura | Duplicado llave | Carnet servicios | Refacturaciones
-                    DocCeldaTexto(table, "Núm. dueños :", e.NumeroDuenos.ToString());                    
-                    DocCeldaTexto(table, "Última Verficación :", e.Verificacion.HasValue ? e.Verificacion.ToString()! : "—");
-                    DocCelda(table, "Carnet de servicios :", e.CarnetServicios);
-                    DocCelda(table, "Factura original :", e.FacturaOriginal);
-                    
+                    DocCeldaTexto(table, "Núm. dueños :", d.NumeroDuenos.ToString());                    
+                    DocCeldaTexto(table, "Última Verficación :", d.UltimaVerificacionPagada.HasValue ? d.UltimaVerificacionPagada.ToString()! : "—");
+                    DocCelda(table, "Carnet de servicios :", d.CarnetServicios);
 
+                    if (DateTime.TryParse(d.UltimoServicioRegistrado?.ToString(), out DateTime fechaServicio))
+                    {
+                        // Lo conviertes al formato que quieras mostrar
+                        string fechaFormateada = fechaServicio.ToString("dd/MM/yyyy");
+                        DocCeldaTexto(table, "Último Servicio :", fechaFormateada);
+                    }
+                    else
+                    {
+                        DocCeldaTextoLargo(table, "Último Servicio :", "Sin registro");
+                    }
 
                     // Fila 2: Núm. dueños | Última tenencia | Verificación | (vacío)
-                    DocCeldaTexto(table, "Refacturaciones :", e.Refacturaciones > 0 ? e.Refacturaciones.ToString() : "0");   
-                    DocCeldaTexto(table, "Última tenencia :", e.UltimaTenenciaPagada.HasValue ? e.UltimaTenenciaPagada.ToString()! : "—");
-                    DocCelda(table, "Duplicado de llave :", e.DuplicadoLlave);
-
+                    DocCeldaTexto(table, "Refacturaciones :", d.Refacturaciones > 0 ? d.Refacturaciones.ToString() : "0");   
+                    DocCeldaTexto(table, "Última tenencia :", d.UltimaTenenciaPagada.HasValue ? d.UltimaTenenciaPagada.ToString()! : "—");
+                    DocCelda(table, "Factura Original :", d.FacturaOriginal);
 
 
                     // celda vacía al final de fila 2
                     table.Cell().Padding(3);
                     table.Cell().Padding(3);
                 });
+
+                if (!string.IsNullOrWhiteSpace(d.ComentariosAvaluoDocumentos))
+                {
+                    column.Item().PaddingTop(3)
+                        .Background(Colors.Orange.Lighten4).Padding(3)
+                        .Text($"⚠ Comentarios : {d.ComentariosAvaluoDocumentos}")
+                        .FontSize(7.5f).Bold().FontColor(Colors.Orange.Darken2);
+                }
 
             });
         }
@@ -354,6 +445,7 @@ namespace CarSlineAPI.Pdf
 
             container.Column(column =>
             {
+
                 column.Item().Background(RojoOscuro).Padding(3)
                     .Text("EQUIPAMIENTO").FontSize(9).Bold().FontColor(Colors.White);
 
@@ -394,7 +486,7 @@ namespace CarSlineAPI.Pdf
                         ("Pantalla",           e.Pantalla),
                         ("GPS",                e.GPS),
                         ("Tracción 4x4",       e.Traccion4x4),
-                        ("Turbo",              e.Turbo),
+                       // ("Turbo",              m.Turbo),
                     };
 
                     for (int i = 0; i < items.Length; i += 6)
@@ -420,9 +512,59 @@ namespace CarSlineAPI.Pdf
                     }
                 });
 
+                column.Item().Border(1).BorderColor(GrisClaro).PaddingTop(1).Table(table =>
+                {
+                    table.ColumnsDefinition(cols =>
+                    {
+                        cols.RelativeColumn();
+                        cols.ConstantColumn(20);
+                        cols.RelativeColumn();
+                        cols.ConstantColumn(20);
+                        cols.RelativeColumn();
+                        cols.ConstantColumn(20);
+                        cols.RelativeColumn();
+                        cols.ConstantColumn(20);
+                        cols.RelativeColumn();
+                        cols.ConstantColumn(20);
+                        cols.RelativeColumn();
+                        cols.ConstantColumn(20);
+                    });
+
+                    var items2 = new (string nombre, bool valor)[]
+                    {
+                        ("Herramienta",        e.Herramienta),
+                        ("Llanta de Refaccion", e.LLantaRefaccion),
+                        ("Birlo de Seguridad", e.BirloSeguridad),
+                        ("Duplicado de llave", e.DuplicadoLlave),
+                        ("Manuales",   e.Manuales),
+                    };
+
+                    for (int i = 0; i < items2.Length; i += 5)
+                    {
+                        for (int j = 0; j < 5; j++)
+                        {
+                            if (i + j < items2.Length)
+                            {
+                                var item2 = items2[i + j];
+                                table.Cell().Padding(3)
+                                    .Text(item2.nombre).FontSize(7);
+                                table.Cell().PaddingTop(1).PaddingRight(18)
+                                    .Text(item2.valor ? "✓" : "✗")
+                                    .FontSize(8)
+                                    .FontColor(item2.valor ? Colors.Green.Darken2 : Colors.Red.Medium);
+                            }
+                            else
+                            {
+                                table.Cell();
+                                table.Cell().BorderBottom(1).BorderColor(GrisClaro);
+                            }
+                        }
+                    }
+                });
+
                 if (!string.IsNullOrWhiteSpace(e.EquipoAdicional))
                 {
-                    column.Item().PaddingTop(3).Padding(5).Row(row =>
+                    column.Item().PaddingTop(2).PaddingLeft(5).Row(row =>
                     {
                         // El título ocupa solo lo que mide el texto
                         row.ConstantItem(70).Text("Equipo adicional: ")
@@ -435,6 +577,15 @@ namespace CarSlineAPI.Pdf
                             .AlignLeft();
                     });
                 }
+
+                if (!string.IsNullOrWhiteSpace(e.ComentariosEquipamiento))
+                {
+                    column.Item().PaddingTop(2)
+                        .Background(Colors.Orange.Lighten4).Padding(3)
+                        .Text($"⚠ Comentarios : {e.ComentariosEquipamiento}")
+                        .FontSize(7.5f).Bold().FontColor(Colors.Orange.Darken2);
+                }
+
             });
         }
 
@@ -489,6 +640,14 @@ namespace CarSlineAPI.Pdf
                             .Text($"${avaluo.CostoAproximadoReacondicionamiento:N2}")
                             .FontSize(9).Bold().FontColor(Colors.Black);
                     });
+
+                if (!string.IsNullOrWhiteSpace(_data.AvaluoMecanico?.ComentariosAvaluoMecanico))
+                {
+                    column.Item().PaddingTop(3)
+                        .Background(Colors.Orange.Lighten4).Padding(3)
+                        .Text($"⚠ Comentarios : {_data.AvaluoMecanico?.ComentariosAvaluoMecanico}")
+                        .FontSize(7.5f).Bold().FontColor(Colors.Orange.Darken2);
+                }
             });
         }
 
@@ -499,6 +658,7 @@ namespace CarSlineAPI.Pdf
         private void SeccionCostos(IContainer container)
         {
             var a = _data.Avaluo!;
+
 
             container.Column(column =>
             {
@@ -512,14 +672,28 @@ namespace CarSlineAPI.Pdf
 
                         col.Item().PaddingTop(4).LineHorizontal(1).LineColor(Colors.Black);
 
+                        string precioMostrar;
+
+                        if (a.PrecioAutorizado == 0)
+                        {
+                            precioMostrar = "Pendiente";
+                        }
+                        else if (a.PrecioTratado > 0 && a.PrecioTratado < a.PrecioAutorizado)
+                        {
+                            precioMostrar = $"${a.PrecioTratado:N2}";
+                        }
+                        else
+                        {
+                            precioMostrar = $"${a.PrecioAutorizado:N2}";
+                        }
+
                         col.Item().PaddingTop(4).Background(RojoOscuro).Padding(5).Row(row =>
                         {
                             row.RelativeItem().Text("PRECIO AUTORIZADO:")
                                 .FontSize(11).Bold().FontColor(Colors.White);
+
                             row.ConstantItem(100).AlignRight()
-                                .Text(a.PrecioAutorizado > 0
-                                    ? $"${a.PrecioAutorizado:N2}"
-                                    : "Pendiente")
+                                .Text(precioMostrar)
                                 .FontSize(11).Bold().FontColor(Colors.White);
                         });
                     });
@@ -651,6 +825,15 @@ namespace CarSlineAPI.Pdf
             table.Cell().Padding(3)
                 .Text(nombre).FontSize(7.5f);
             table.Cell().Padding(3)
+                .Text(texto)
+                .FontSize(7.5f).Bold()
+                .FontColor(Colors.Black);
+        }
+        private static void DocCeldaTextoLargo(TableDescriptor table, string nombre, string texto)
+        {
+            table.Cell().Padding(3)
+                .Text(nombre).FontSize(7.5f);
+            table.Cell().Padding(1)
                 .Text(texto)
                 .FontSize(7.5f).Bold()
                 .FontColor(Colors.Black);

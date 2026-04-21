@@ -1,5 +1,6 @@
 ﻿
 using CarSlineAPI.Data;
+using CarSlineAPI.Models.DTOs;
 using CarSlineAPI.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -253,6 +254,7 @@ namespace CarSlineAPI.Controllers
 
 
         // GET: api/EvidenciasOrden/imagen/5
+
         [HttpGet("imagen/{id}")]
         public async Task<IActionResult> GetImagen(int id)
         {

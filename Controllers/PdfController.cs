@@ -325,17 +325,31 @@ namespace CarSlineAPI.Controllers
             EquipamientoDto? equipamientoDto = null;
             if (avaluo.AvaluoEquipamiento)
             {
-                var eq = await _db.EquipamientoAvaluos
-                    .FirstOrDefaultAsync(e => e.AvaluoId == avaluoId);
+                var eq = await _db.EquipamientoAvaluos.FirstOrDefaultAsync(e => e.AvaluoId == avaluoId);
 
                 if (eq != null)
                     equipamientoDto = MapearEquipamientoDto(eq);
             }
+            AvaluoDocumentosDto? avaluoDocumentos = null;
+            if (avaluo.AvaluoDocumentos)
+            {
+                var doc = await _db.DocumentosAvaluos.FirstOrDefaultAsync(d => d.AvaluoId == avaluo.Id);
+                if (doc != null)
+                  avaluoDocumentos = MapearDocumentosAvaluo(doc);
+            }
+            AvaluoMecanicoDto? avaluoMecanico = null;
+            if (avaluo.AvaluoMecanico)
+            {
+                var mec = await _db.AvaluosMecanicos.FirstOrDefaultAsync(m => m.AvaluoId == avaluo.Id);
+                if (mec != null)
+                    avaluoMecanico = MapearAvaluoMecanico(mec);
+            }
 
             // Reparaciones (si existen)
             List<ReparacionDto>? reparacionesDto = null;
-            if (avaluo.AvaluoReparaciones)
+            if (avaluo.AvaluoMecanico)
             {
+
                 reparacionesDto = await _db.ReparacionesAvaluos
                     .Where(r => r.AvaluoId == avaluoId)
                     .Select(r => new ReparacionDto
@@ -347,6 +361,11 @@ namespace CarSlineAPI.Controllers
                     })
                     .ToListAsync();
             }
+            // Tecnico (valuador)
+            string tecnicoNombre = "";
+            var tecnico= await _db.Usuarios.FindAsync(avaluo.TecnicoId);
+            if (tecnico!= null)
+                tecnicoNombre = tecnico.NombreCompleto;
 
             // Asesor (valuador)
             string asesorNombre = "";
@@ -359,17 +378,21 @@ namespace CarSlineAPI.Controllers
                 Success = true,
                 Message = "OK",
                 AvaluoId = avaluo.Id,
-                Avaluo = MapearAvaluoDto(avaluo, asesorNombre),
+                Avaluo = MapearAvaluoDto(avaluo, asesorNombre, tecnicoNombre),
                 Equipamiento = equipamientoDto,
+                Documentos = avaluoDocumentos,
+                AvaluoMecanico = avaluoMecanico,
                 Reparaciones = reparacionesDto ?? new List<ReparacionDto>()
+                
             };
         }
 
         // Reutiliza los mismos helpers de AvaluosController
-        private static AvaluoDto MapearAvaluoDto(CarSlineAPI.Models.Entities.DatosAvaluo a, string asesorNombre) => new()
+        private static AvaluoDto MapearAvaluoDto(DatosAvaluo a, string asesorNombre, string tecinicoNombre) => new()
         {
             Id = a.Id,
             AsesorNombre = asesorNombre,
+            TecnicoNombre = tecinicoNombre,
             NombreCompleto = a.NombreCompleto,
             TipoCliente = a.TipoCliente,
             Telefono1 = a.Telefono1,
@@ -381,12 +404,13 @@ namespace CarSlineAPI.Controllers
             Color = a.Color,
             VIN = a.VIN,
             Placas = a.Placas,
+            PlacasEdo = a.PlacasEdo,
             Kilometraje = a.Kilometraje,
             CuentaDeVehiculo = a.CuentaDeVehiculo,
             PrecioSolicitado = a.PrecioSolicitado,
+            PrecioTratado =a.PrecioTratado,
             CostoAproximadoReacondicionamiento = a.CostoAproximadoReacondicionamiento,
             FechaAvaluo = a.FechaAvaluo,
-            BajaPlacas = a.BajaPlacas,
             Fotografias = a.FotografiasAvaluo,
             VehiculoApto = a.VehiculoApto,
             PrecioAutorizado = a.PrecioAutorizado,
@@ -394,10 +418,43 @@ namespace CarSlineAPI.Controllers
             VehiculoComprado = a.VehiculoComprado
         };
 
-        private static EquipamientoDto MapearEquipamientoDto(CarSlineAPI.Models.Entities.EquipamientoAvaluo e) => new()
+        private static AvaluoDocumentosDto MapearDocumentosAvaluo(DocumentosAvaluo a) => new()
+        {
+            Id = a.Id,
+            CarnetServicios = a.CarnetServicios,
+            UltimoServicioRegistrado = a.UltimoServicioRegistrado,
+            UltimaTenenciaPagada = a.UltimaTenenciaPagada,
+            UltimaVerificacionPagada = a.UltimaVerificacionPagada,
+            FacturaOriginal = a.FacturaOriginal,
+            NumeroDuenos = a.NumeroDuenos,
+            Refacturaciones = a.Refacturaciones,
+            DocumentacionCompleta = a.DocumentacionCompleta,
+            ComentariosAvaluoDocumentos = a.ComentariosAvaluoDocumentos,
+        };
+        private static AvaluoMecanicoDto MapearAvaluoMecanico(AvaluoMecanico a) => new()
+        {
+            Id = a.Id,
+            Combustible = a.Combustible,
+            Motor = a.Motor,
+            Turbo = a.Turbo,
+            CantidadCilindros = a.CantidadCilindros,
+            Transmision = a.Transmision,
+            MarcaLlantasDelanteras = a.MarcaLlantasDelanteras,
+            VidaUtilLlantasDelanteras = a.VidaUtilLlantasDelanteras,
+            MarcaLlantasTraseras = a.MarcaLlantasTraseras,
+            VidaUtilLlantasTraseras = a.VidaUtilLlantasTraseras,
+            ComentariosAvaluoMecanico = a.ComentariosAvaluoMecanico,
+        };
+
+        private static EquipamientoDto MapearEquipamientoDto(EquipamientoAvaluo e) => new()
         {
             Id = e.Id,
             AvaluoId = e.AvaluoId,
+            Herramienta = e.Herramienta,
+            LLantaRefaccion = e.LLantaRefaccion,
+            BirloSeguridad = e.BirloSeguridad,
+            Manuales = e.Manuales,
+            DuplicadoLlave = e.DuplicadoLlave,
             ACC = e.ACC,
             Quemacocos = e.Quemacocos,
             EspejosElectricos = e.EspejosElectricos,
@@ -411,30 +468,16 @@ namespace CarSlineAPI.Controllers
             ABS = e.ABS,
             DireccionAsistida = e.DireccionAsistida,
             BolsasAire = e.BolsasAire,
-            TransmisionAutomatica = e.TransmisionAutomatica,
-            TransmisionManual = e.TransmisionManual,
-            Turbo = e.Turbo,
             Traccion4x4 = e.Traccion4x4,
             Bluetooth = e.Bluetooth,
             USB = e.USB,
             Pantalla = e.Pantalla,
             GPS = e.GPS,
             CantidadPuertas = e.CantidadPuertas,
+            CantidadPasajeros = e.CantidadPasajeros,
             Vestiduras = e.Vestiduras,
-            Motor = e.Motor,
-            CantidadCilindros = e.CantidadCilindros,
-            FacturaOriginal = e.FacturaOriginal,
-            NumeroDuenos = e.NumeroDuenos,
-            Refacturaciones = e.Refacturaciones,
-            UltimaTenenciaPagada = e.UltimaTenenciaPagada,
-            Verificacion = e.Verificacion,
-            DuplicadoLlave = e.DuplicadoLlave,
-            CarnetServicios = e.CarnetServicios,
             EquipoAdicional = e.EquipoAdicional,
-            MarcaLlantasDelanteras = e.MarcaLlantasDelanteras,
-            VidaUtilLlantasDelanteras = e.VidaUtilLlantasDelanteras,
-            MarcaLlantasTraseras = e.MarcaLlantasTraseras,
-            VidaUtilLlantasTraseras = e.VidaUtilLlantasTraseras
+            ComentariosEquipamiento = e.ComentariosEquimapiento,
         };
     }
 

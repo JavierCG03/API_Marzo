@@ -37,6 +37,8 @@ namespace CarSlineAPI.Data
         public DbSet<EquipamientoAvaluo> EquipamientoAvaluos { get; set; }
         public DbSet<AvaluoFoto> AvaluoFotos { get; set; }
         public DbSet<ReparacionAvaluo> ReparacionesAvaluos { get; set; }
+        public DbSet<AvaluoMecanico> AvaluosMecanicos { get; set; }
+        public DbSet<DocumentosAvaluo> DocumentosAvaluos { get; set; }
         public DbSet<InventarioGeneral> InventarioGeneral { get; set; }
         public DbSet<EntradaInventario> EntradasInventario { get; set; }
         public DbSet<SalidaInventario> SalidasInventario { get; set; }
@@ -244,6 +246,45 @@ namespace CarSlineAPI.Data
                     .HasForeignKey(e => e.AsesorId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
+
+            modelBuilder.Entity<AvaluoMecanico>(entity =>
+            {
+                entity.ToTable("avaluosmecanicos");
+
+                entity.HasIndex(e => e.AvaluoId)
+                    .IsUnique()
+                    .HasDatabaseName("UX_Avaluo");
+
+                entity.HasOne(e => e.Avaluo)
+                    .WithOne(a => a.MecanicoAvaluo)
+                    .HasForeignKey<AvaluoMecanico>(e => e.AvaluoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Tecnico)
+                    .WithMany()
+                    .HasForeignKey(e => e.TecnicoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<DocumentosAvaluo>(entity =>
+            {
+                entity.ToTable("documentosavaluos");
+
+                entity.HasIndex(e => e.AvaluoId)
+                    .IsUnique()
+                    .HasDatabaseName("UX_Avaluo");
+
+                entity.HasOne(e => e.Avaluo)
+                    .WithOne(a => a.Documentos)
+                    .HasForeignKey<DocumentosAvaluo>(e => e.AvaluoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Asesor)
+                    .WithMany()
+                    .HasForeignKey(e => e.AsesorId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+
             modelBuilder.Entity<RefaccionEquivalente>(entity =>
             {
                 entity.ToTable("RefaccionesEquivalentes");
