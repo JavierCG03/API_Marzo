@@ -22,7 +22,6 @@ namespace CarSlineAPI.Data
         public DbSet<ServicioFrecuente> ServiciosFrecuentes { get; set; }
         public DbSet<OrdenGeneral> OrdenesGenerales { get; set; }
         public DbSet<HistorialServicio> HistorialServicios { get; set; }
-        public DbSet<Refaccion> Refacciones { get; set; }
         public DbSet<CheckListServicio> CheckListServicios { get; set; }
         public DbSet<TrabajoPorOrden> TrabajosPorOrden { get; set; }
         public DbSet<EstadoTrabajo> EstadosTrabajos { get; set; }
@@ -44,7 +43,10 @@ namespace CarSlineAPI.Data
         public DbSet<SalidaInventario> SalidasInventario { get; set; }
         public DbSet<CompatibilidadRefaccion> CompatibilidadRefacciones { get; set; }
         public DbSet<RefaccionEquivalente> RefaccionesEquivalentes { get; set; }
-
+        public DbSet<Marca> Marcas { get; set; }
+        public DbSet<Modelo> Modelos { get; set; }
+        public DbSet<Versiona> Versiones { get; set; }
+        public DbSet<CheckListAvaluo> CheckListAvaluos { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -339,6 +341,54 @@ namespace CarSlineAPI.Data
                     .HasForeignKey(e => e.TrabajoId)
                     .OnDelete(DeleteBehavior.SetNull);
             });
+
+            modelBuilder.Entity<Marca>(entity =>
+            {
+                entity.HasIndex(e => e.Nombre).IsUnique().HasDatabaseName("UX_Marca_Nombre");
+            });
+
+            modelBuilder.Entity<Modelo>(entity =>
+            {
+                entity.HasIndex(e => new { e.MarcaId, e.Nombre }).IsUnique().HasDatabaseName("UX_Modelo_MarcaNombre");
+                entity.HasIndex(e => e.TipoCarroceria).HasDatabaseName("IX_Modelo_Tipo");
+
+                entity.HasOne(e => e.Marca)
+                    .WithMany(m => m.Modelos)
+                    .HasForeignKey(e => e.MarcaId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<Versiona>(entity =>
+            {
+                entity.HasIndex(e => new { e.ModeloId, e.Nombre }).IsUnique().HasDatabaseName("UX_Version_ModeloNombre");
+
+                entity.HasOne(e => e.Modelo)
+                    .WithMany(m => m.Versiones)
+                    .HasForeignKey(e => e.ModeloId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+            modelBuilder.Entity<CheckListAvaluo>(entity =>
+            {
+                entity.ToTable("checklistavaluos");
+
+                entity.HasIndex(e => e.AvaluoId)
+                    .IsUnique()
+                    .HasDatabaseName("UX_CheckListAvaluo");
+
+                entity.HasIndex(e => e.VigilanteId)
+                    .HasDatabaseName("IX_Vigilante");
+
+                entity.HasOne(e => e.Avaluo)
+                    .WithMany()
+                    .HasForeignKey(e => e.AvaluoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Vigilante)
+                    .WithMany()
+                    .HasForeignKey(e => e.VigilanteId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
         }
     }
 }

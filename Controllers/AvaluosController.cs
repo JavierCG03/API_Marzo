@@ -799,7 +799,7 @@ namespace CarSlineAPI.Controllers
             try
             {
                 var baseAvaluo = await _db.DatosAvaluos
-                    .Where(a => a.Id == id )//& a.Activo)
+                    .Where(a => a.Id == id )
                     .Select(a => new { a.Id, a.AvaluoEquipamiento, a.AvaluoMecanico, a.AvaluoDocumentos})
 
                     .FirstOrDefaultAsync();
@@ -811,7 +811,7 @@ namespace CarSlineAPI.Controllers
                         Message = "Avalúo no encontrado"
                     });
 
-                var query = _db.DatosAvaluos.Where(a => a.Id == id);//&& a.Activo);
+                var query = _db.DatosAvaluos.Where(a => a.Id == id);
 
                 if (baseAvaluo.AvaluoEquipamiento)
                     query = query.Include(a => a.Equipamiento);
@@ -1041,6 +1041,104 @@ namespace CarSlineAPI.Controllers
         }
 
         // ============================================
+        // PUT: api/Avaluos/TomarVehiculoRevision/{id}
+        // ============================================
+        /// <summary>
+        /// Tomar vehiculo para revision
+        /// </summary>
+        [HttpPut("TomarVehiculoRevision/{id}")]
+        [ProducesResponseType(typeof(CrearAvaluoResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> RevisionAvaluo(int id)
+        {
+            try
+            {
+                var avaluo = await _db.DatosAvaluos
+                    .FirstOrDefaultAsync(a => a.Id == id && a.Activo);
+
+                if (avaluo == null)
+                    return NotFound(new CrearAvaluoResponse
+                    {
+                        Success = false,
+                        Message = "Avalúo no encontrado"
+                    });
+
+                avaluo.VehiculoTomadoRevision = true;
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    $"Avalúo {avaluo.Marca} {avaluo.Modelo} Cancelado");
+
+                return Ok(new CrearAvaluoResponse
+                {
+                    Success = true,
+                    Message = "Avalúo tomado a revision",
+                    AvaluoId = avaluo.Id,
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al actualizar estado de  avalúo {id}");
+                return StatusCode(500, new CrearAvaluoResponse
+                {
+                    Success = false,
+                    Message = "Error al actualizar  avalúo"
+                });
+            }
+        }
+
+        // ============================================
+        // PUT: api/Avaluos/TomarVehiculoRevision/{id}
+        // ============================================
+        /// <summary>
+        /// VehiculoComprado
+        /// </summary>
+        [HttpPut("VehiculoComprado/{id}")]
+        [ProducesResponseType(typeof(CrearAvaluoResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> TomaVehiculo(int id)
+        {
+            try
+            {
+                var avaluo = await _db.DatosAvaluos
+                    .FirstOrDefaultAsync(a => a.Id == id && a.Activo);
+
+                if (avaluo == null)
+                    return NotFound(new CrearAvaluoResponse
+                    {
+                        Success = false,
+                        Message = "Avalúo no encontrado"
+                    });
+
+                avaluo.VehiculoComprado = true;
+                avaluo.Activo = false;
+
+                await _db.SaveChangesAsync();
+
+                _logger.LogInformation(
+                    $"Avalúo {avaluo.Marca} {avaluo.Modelo} Cancelado");
+
+                return Ok(new CrearAvaluoResponse
+                {
+                    Success = true,
+                    Message = "Avalúo Concluido, Toma concretada",
+                    AvaluoId = avaluo.Id,
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al comprar este Vehiculo {id}");
+                return StatusCode(500, new CrearAvaluoResponse
+                {
+                    Success = false,
+                    Message = "Error al comprar avalúo"
+                });
+            }
+        }
+
+
+        // ============================================
         // GET: api/Avaluos/foto/{id}
         // ============================================
         /// <summary>
@@ -1142,9 +1240,9 @@ namespace CarSlineAPI.Controllers
                 // Estadísticas globales
                 int avaluosRealizados = avaluos.Count;
                 int tomasConcretadas = avaluos.Count(a => a.VehiculoComprado);
-                int avaluosCancelados = avaluos.Count(a => !a.Activo);
-                int avaluosPendientes = avaluos.Count(a => a.Activo && !a.VehiculoComprado);
-
+                int avaluosCancelados = avaluos.Count(a => !a.Activo && !a.VehiculoComprado );
+                int avaluosPendientes = avaluos.Count(a => a.Activo && !a.VehiculoComprado && a.VehiculoApto && !a.VehiculoTomadoRevision);
+                int avaluosInvestigacion = avaluos.Count(a => a.Activo && !a.VehiculoComprado && a.VehiculoApto && a.VehiculoTomadoRevision);
                 // Agrupar avalúos por asesor en memoria
                 var avaluosPorAsesor = avaluos
                     .GroupBy(a => a.AsesorId)
@@ -1164,8 +1262,9 @@ namespace CarSlineAPI.Controllers
                             AsesorId = asesor.Id,
                             AvaluoRealizados = avaluosAsesor.Count,
                             TomasConcretadas = avaluosAsesor.Count(a => a.VehiculoComprado),
-                            AvaluosCancelados = avaluosAsesor.Count(a => !a.Activo),
-                            AvaluosPendientes = avaluosAsesor.Count(a => a.Activo && !a.VehiculoComprado),
+                            AvaluosCancelados = avaluosAsesor.Count(a => !a.Activo && !a.VehiculoComprado),
+                            AvaluosPendientes = avaluosAsesor.Count(a => a.Activo && !a.VehiculoComprado && a.VehiculoApto && !a.VehiculoTomadoRevision),
+                            AvaluosInvestigacion = avaluosAsesor.Count(a => a.Activo && !a.VehiculoComprado && a.VehiculoApto && a.VehiculoTomadoRevision),
                         };
                     })
                     .OrderByDescending(e => e.TomasConcretadas)
@@ -1180,6 +1279,7 @@ namespace CarSlineAPI.Controllers
                     TomasConcretadas = tomasConcretadas,
                     AvaluosCancelados = avaluosCancelados,
                     AvaluosPendientes = avaluosPendientes,
+                    AvaluosInvestigacion = avaluosInvestigacion,
                     Compradores = compradores
                 });
             }
@@ -1255,8 +1355,9 @@ namespace CarSlineAPI.Controllers
                 query = request.TipoAvaluo.ToLower() switch
                 {
                     "concretado" => query.Where(a => a.VehiculoComprado),
-                    "cancelado" => query.Where(a => !a.Activo),
-                    "pendiente" => query.Where(a => a.Activo && !a.VehiculoComprado),
+                    "cancelado" => query.Where(a => !a.Activo && !a.VehiculoComprado),
+                    "pendiente" => query.Where(a => a.Activo && !a.VehiculoComprado && a.VehiculoApto && !a.VehiculoTomadoRevision),
+                    "investigado" => query.Where(a => a.Activo && !a.VehiculoComprado && a.VehiculoApto && a.VehiculoTomadoRevision),
                     _ => query
                 };
 
@@ -1277,6 +1378,7 @@ namespace CarSlineAPI.Controllers
                     "concretado" => "Tomas Concretadas",
                     "cancelado" => "Avalúos Cancelados",
                     "pendiente" => "Avalúos Pendientes",
+                    "invetigado" => "Avalúos en Investigacion",
                     _ => request.TipoAvaluo
                 };
 
@@ -1333,6 +1435,7 @@ namespace CarSlineAPI.Controllers
             VehiculoTomadoRevision = a.VehiculoTomadoRevision,
             VehiculoComprado = a.VehiculoComprado,
             ComentariosCancelacion = a.ComentariosCancelacion,
+            Activo =a.Activo
         };
         private static AvaluoMecanicoDto MapearAvaluoMecanico(AvaluoMecanico a) => new()
         {

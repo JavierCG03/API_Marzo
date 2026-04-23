@@ -271,42 +271,6 @@ namespace CarSlineAPI.Models.Entities
         public decimal CostoTotal { get; set; }
     }
 
-    [Table("refacciones")]
-    public class Refaccion
-    {
-        [Key]
-        public int Id { get; set; }
-
-        [Required]
-        [MaxLength(50)]
-        public string NumeroParte { get; set; } = string.Empty;
-
-        [Required]
-        [MaxLength(100)]
-        public string TipoRefaccion { get; set; } = string.Empty;
-
-        [MaxLength(10)]
-        public string? Ubicacion { get; set; }
-
-        [MaxLength(50)]
-        public string? MarcaVehiculo { get; set; }
-
-        [MaxLength(50)]
-        public string? Modelo { get; set; }
-
-        public int? Anio { get; set; }
-
-        [Required]
-        public int Cantidad { get; set; }
-
-        public DateTime FechaRegistro { get; set; } = DateTime.Now;
-
-        public DateTime FechaUltimaModificacion { get; set; } = DateTime.Now;
-
-        public bool Activo { get; set; } = true;
-    }
-
-
     [Table("trabajopororden")]
     public class TrabajoPorOrden
     {
@@ -1267,10 +1231,10 @@ namespace CarSlineAPI.Models.Entities
         [ForeignKey("MarcaId")]
         public virtual Marca? Marca { get; set; }
 
-        public virtual ICollection<Version> Versiones { get; set; } = new List<Version>();
+        public virtual ICollection<Versiona> Versiones { get; set; } = new List<Versiona>();
     }
     [Table("Versiones")]
-    public class Version
+    public class Versiona
     {
         [Key]
         public int Id { get; set; }
@@ -1288,6 +1252,100 @@ namespace CarSlineAPI.Models.Entities
         public virtual Modelo? Modelo { get; set; }
     }
 
+    [Table("checklistavaluos")]
+    public class CheckListAvaluo
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int AvaluoId { get; set; }
+
+        [Required]
+        public int VigilanteId { get; set; }
+
+        [Required]
+        public int Kilometraje { get; set; }
+
+        public byte? Combustible { get; set; }
+
+        // Accesorios / Documentos
+        public bool DuplicadoLlave { get; set; } = false;
+        public bool BirloSeguridad { get; set; } = false;
+        public bool CandadoSeguridad { get; set; } = false;
+        public bool TapaCajuela { get; set; } = false;
+        public bool CortinaCajuela { get; set; } = false;
+        public bool Refaccion { get; set; } = false;
+        public bool Gato { get; set; } = false;
+        public bool Maneral { get; set; } = false;
+        public bool LlaveLoCruz { get; set; } = false;
+        public bool GanchoArrastre { get; set; } = false;
+        public bool TaponGasolina { get; set; } = false;
+        public bool Rines { get; set; } = false;
+        public bool Tapones { get; set; } = false;
+        public bool CentroRin { get; set; } = false;
+        public bool RadioEstereo { get; set; } = false;
+        public bool LimpiadorDelantero { get; set; } = false;
+        public bool LimpiadorTrasero { get; set; } = false;
+        public bool Viseras { get; set; } = false;
+        public bool Cabeceras { get; set; } = false;
+        public bool Tapetes { get; set; } = false;
+        public bool FarosNiebla { get; set; } = false;
+        public bool Bateria { get; set; } = false;
+        public bool VarillasPickUp { get; set; } = false;
+        public bool Encendedor { get; set; } = false;
+        public bool AntenaRadio { get; set; } = false;
+        public bool Maletin { get; set; } = false;
+        public bool Cubresala { get; set; } = false;
+        public bool Cubrevolante { get; set; } = false;
+
+        // Datos de Batería y Llantas
+        [MaxLength(20)]
+        public string? MarcaBateria { get; set; }
+
+        [MaxLength(20)]
+        public string? MarcaLlantaDelanteraDer { get; set; }
+
+        [MaxLength(20)]
+        public string? MarcaLlantaDelanteraIzq { get; set; }
+
+        [MaxLength(20)]
+        public string? MarcaLlantaTraseraDer { get; set; }
+
+        [MaxLength(20)]
+        public string? MarcaLlantaTraseraIzq { get; set; }
+
+        [MaxLength(20)]
+        public string? MedidaLlantaDelanteraDer { get; set; }
+
+        [MaxLength(20)]
+        public string? MedidaLlantaDelanteraIzq { get; set; }
+
+        [MaxLength(20)]
+        public string? MedidaLlantaTraseraDer { get; set; }
+
+        [MaxLength(20)]
+        public string? MedidaLlantaTraseraIzq { get; set; }
+
+        [MaxLength(20)]
+        public string? MarcaLlantaRefaccion { get; set; }
+
+        [MaxLength(20)]
+        public string? MedidaLlantaRefaccion { get; set; }
+
+        [Column(TypeName = "TEXT")]
+        public string? Comentarios { get; set; }
+
+        [Column(TypeName = "TEXT")]
+        public string? Observaciones { get; set; }
+
+        // Navegación
+        [ForeignKey("AvaluoId")]
+        public virtual DatosAvaluo? Avaluo { get; set; }
+
+        [ForeignKey("VigilanteId")]
+        public virtual Usuario? Vigilante { get; set; }
+    }
 
 }
 

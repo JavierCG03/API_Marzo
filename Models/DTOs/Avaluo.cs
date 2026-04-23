@@ -215,8 +215,8 @@ namespace CarSlineAPI.Models.DTOs
         /// Valores permitidos: "pendiente", "concretado", "cancelado"
         /// </summary>
         [Required]
-        [RegularExpression("^(pendiente|concretado|cancelado)$",
-            ErrorMessage = "TipoAvaluo debe ser: pendiente, concretado o cancelado")]
+        [RegularExpression("^(pendiente|concretado|investigado|cancelado)$",
+            ErrorMessage = "TipoAvaluo debe ser: pendiente, concretado, cancelado o investigado")]
         public string TipoAvaluo { get; set; } = string.Empty;
     }
 
@@ -231,6 +231,7 @@ namespace CarSlineAPI.Models.DTOs
         public int TomasConcretadas { get; set; }
         public int AvaluosCancelados { get; set; }
         public int  AvaluosPendientes { get; set; }
+        public int AvaluosInvestigacion { get; set; }
         public List<EstadisticasCompradorDTO> Compradores { get; set; } = new();
     }
 
@@ -331,6 +332,8 @@ namespace CarSlineAPI.Models.DTOs
         public bool Success { get; set; }
         public string Message { get; set; } = string.Empty;
         public int AvaluoId { get; set; }
+
+        [Required]
         public AvaluoDto? Avaluo { get; set; }
         public EquipamientoDto? Equipamiento { get; set; }
         public AvaluoDocumentosDto? Documentos { get; set; }    
@@ -350,6 +353,7 @@ namespace CarSlineAPI.Models.DTOs
         public int TomasConcretadas { get; set; }
         public int AvaluosCancelados { get; set; }
         public int AvaluosPendientes { get; set; }
+        public int AvaluosInvestigacion { get; set; }
 
     }
 
@@ -382,6 +386,7 @@ namespace CarSlineAPI.Models.DTOs
         public bool VehiculoTomadoRevision { get; set; }
         public bool VehiculoComprado { get; set; }
         public string? ComentariosCancelacion {  get; set; }
+        public bool Activo { get; set; }
 
     }
     public class EquipamientoDto
