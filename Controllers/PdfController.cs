@@ -170,6 +170,41 @@ namespace CarSlineAPI.Controllers
             }
         }
 
+        /// <summary>
+        /// Vista previa en Base64 del PDF de un avalúo
+        /// POST api/Pdf/avaluo/{avaluoId}/preview
+        /// </summary>
+        [HttpPost("CheckList/{avaluoId}/preview")]
+        [ProducesResponseType(typeof(PdfPreviewResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> PreviewPdfCheckLsit(int avaluoId)
+        {
+            try
+            {
+                var data = await ObtenerDatosCheckListAsync(avaluoId);
+                if (data == null)
+                    return NotFound(new { Message = "Avalúo no encontrado" });
+
+                var pdfBytes = await _pdfService.GuardarPdfCheckListAsync(data, $"Avaluo_{avaluoId:D6}");
+
+                return Ok(new PdfPreviewResponse
+                {
+                    Success = true,
+                    PdfBase64 = Convert.ToBase64String(pdfBytes),
+                    NumeroOrden = $"CHECKLIST_{data.Avaluo.VIN}",
+                    TamanoBytes = pdfBytes.Length
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"❌ Error en vista previa PDF avalúo {avaluoId}");
+                return StatusCode(500, new PdfPreviewResponse
+                {
+                    Success = false,
+                    Message = $"Error: {ex.Message}"
+                });
+            }
+        }
         private async Task<OrdenPdfDto?> ObtenerDatosOrdenAsync(int ordenId)
         {
             var orden = await _db.OrdenesGenerales
@@ -387,12 +422,59 @@ namespace CarSlineAPI.Controllers
             };
         }
 
+
+        // -------------------------------------------------------
+        // Método privado que construye el CheckListCompletoResponse
+        // -------------------------------------------------------
+
+        private async Task<CheckListAvaluoCompletoPdf?> ObtenerDatosCheckListAsync(int avaluoId)
+        {
+            var avaluo = await _db.DatosAvaluos
+                .Where(a => a.Id == avaluoId && a.Activo)
+                .FirstOrDefaultAsync();
+
+            if (avaluo == null) return null;
+
+            CheckListAvaluoDto? CheckList = null;
+            { 
+                var check = await _db.CheckListAvaluos.FirstOrDefaultAsync(d => d.AvaluoId == avaluo.Id);
+                
+                string vigilanteNombre = "";
+                var vigilante = await _db.Usuarios.FindAsync(check.VigilanteId);
+                if (vigilante != null)
+                    vigilanteNombre = vigilante.NombreCompleto;
+
+                if (check != null)
+                    CheckList = MapearCheckListAvaluo(check, vigilanteNombre);
+
+            }
+
+            // Tecnico (valuador)
+            string tecnicoNombre = "";
+            var tecnico = await _db.Usuarios.FindAsync(avaluo.TecnicoId);
+            if (tecnico != null)
+                tecnicoNombre = tecnico.NombreCompleto;
+
+
+            // Asesor (valuador)
+            string asesorNombre = "";
+            var asesor = await _db.Usuarios.FindAsync(avaluo.AsesorId);
+            if (asesor != null)
+                asesorNombre = asesor.NombreCompleto;
+
+            return new CheckListAvaluoCompletoPdf
+            {
+                Avaluo = MapearAvaluoDto(avaluo, asesorNombre,tecnicoNombre),
+                CheckList = CheckList
+            };
+        }
+
         // Reutiliza los mismos helpers de AvaluosController
-        private static AvaluoDto MapearAvaluoDto(DatosAvaluo a, string asesorNombre, string tecinicoNombre) => new()
+        private static AvaluoDto MapearAvaluoDto(DatosAvaluo a, string asesorNombre, string tecnicoNombre) => new()
         {
             Id = a.Id,
             AsesorNombre = asesorNombre,
-            TecnicoNombre = tecinicoNombre,
+            TecnicoNombre = tecnicoNombre,
             NombreCompleto = a.NombreCompleto,
             TipoCliente = a.TipoCliente,
             Telefono1 = a.Telefono1,
@@ -431,6 +513,57 @@ namespace CarSlineAPI.Controllers
             DocumentacionCompleta = a.DocumentacionCompleta,
             ComentariosAvaluoDocumentos = a.ComentariosAvaluoDocumentos,
         };
+        private static CheckListAvaluoDto MapearCheckListAvaluo(CheckListAvaluo c, string vigilanteNombre) => new()
+        {
+        Id  = c.Id,
+        AvaluoId =c.AvaluoId,
+        VigilanteId = c.VigilanteId,
+        VigilanteNombre = vigilanteNombre,
+        Kilometraje = c.Kilometraje,
+        Combustible = c.Combustible,
+
+        DuplicadoLlave = c.DuplicadoLlave,
+        BirloSeguridad  = c.BirloSeguridad,
+        CandadoSeguridad  = c.CandadoSeguridad,
+        TapaCajuela  = c.TapaCajuela,
+        CortinaCajuela = c.CortinaCajuela,
+        Refaccion = c.Refaccion,
+        Gato = c.Gato,
+        Maneral = c.Maneral,
+        LlaveLoCruz = c.LlaveLoCruz,
+        GanchoArrastre = c.GanchoArrastre,
+        TaponGasolina = c.TaponGasolina,
+        Rines = c.Rines,
+        Tapones = c.Tapones,
+        CentroRin = c.CentroRin,
+        RadioEstereo = c.RadioEstereo,
+        LimpiadorDelantero = c.LimpiadorDelantero,
+        LimpiadorTrasero = c.LimpiadorTrasero,
+        Viseras = c.Viseras,
+        Cabeceras = c.Cabeceras,
+        Tapetes = c.Tapetes,
+        FarosNiebla = c.FarosNiebla,
+        Bateria = c.Bateria,
+        VarillasPickUp = c.VarillasPickUp, 
+        Encendedor = c.Encendedor,
+        AntenaRadio =c.AntenaRadio,
+        Maletin =c.Maletin,
+        Cubresala = c.Cubresala,
+        Cubrevolante = c.Cubrevolante,
+        MarcaBateria  = c.MarcaBateria,
+        MarcaLlantaDelanteraDer = c.MarcaLlantaDelanteraDer,
+        MarcaLlantaDelanteraIzq = c.MarcaLlantaDelanteraIzq,
+        MarcaLlantaTraseraDer = c.MarcaLlantaTraseraDer,
+        MarcaLlantaTraseraIzq =c.MarcaLlantaTraseraIzq,
+        MedidaLlantaDelanteraDer = c.MedidaLlantaDelanteraDer,
+        MedidaLlantaDelanteraIzq = c.MedidaLlantaDelanteraIzq,
+        MedidaLlantaTraseraDer = c.MedidaLlantaTraseraDer,
+        MedidaLlantaTraseraIzq = c.MedidaLlantaTraseraIzq,
+        MarcaLlantaRefaccion = c.MedidaLlantaRefaccion,
+        MedidaLlantaRefaccion = c.MedidaLlantaRefaccion,
+        Comentarios = c.Comentarios,
+        Observaciones = c.Observaciones,
+    };
         private static AvaluoMecanicoDto MapearAvaluoMecanico(AvaluoMecanico a) => new()
         {
             Id = a.Id,
@@ -480,5 +613,7 @@ namespace CarSlineAPI.Controllers
             ComentariosEquipamiento = e.ComentariosEquimapiento,
         };
     }
+
+
 
 }

@@ -137,4 +137,11 @@ namespace CarSlineAPI.Models.DTOs
         public string Message { get; set; } = string.Empty;
         public CheckListAvaluoDto? CheckList { get; set; }
     }
+
+    public class CheckListAvaluoCompletoPdf
+    {
+        public AvaluoDto Avaluo { get; set; } 
+        public CheckListAvaluoDto CheckList { get; set; }
+
+    }
 }

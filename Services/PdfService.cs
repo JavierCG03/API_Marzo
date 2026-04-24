@@ -12,6 +12,10 @@ namespace CarSlineAPI.Services
 
         Task<byte[]> GenerarPdfAvaluoAsync(AvaluoCompletoResponse data);
         Task<byte[]> GuardarPdfAvaluoAsync(AvaluoCompletoResponse data, string numeroAvaluo);
+
+        Task<byte[]> GenerarPdfCheckListAsync(CheckListAvaluoCompletoPdf data);
+        Task<byte[]> GuardarPdfCheckListAsync(CheckListAvaluoCompletoPdf data, string numeroAvaluo);
+
     }
 
     /// <summary>
@@ -104,6 +108,43 @@ namespace CarSlineAPI.Services
             try
             {
                 var pdfBytes = await GenerarPdfAvaluoAsync(data);
+                return pdfBytes;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error al guardar PDF para avalúo {NumeroAvaluo}", numeroAvaluo);
+                throw;
+            }
+        }
+
+        // -------------------------------------------------------
+        // CheckList
+        // -------------------------------------------------------
+
+
+        public async Task<byte[]> GenerarPdfCheckListAsync(CheckListAvaluoCompletoPdf data)
+        {
+            try
+            {
+                _logger.LogInformation("📄 Generando PDF para check list avalúo ID {AvaluoId}", data.Avaluo.Id);
+
+                var builder = new CheckListAvaluoPdfBuilder(data);
+                var pdfBytes = builder.Build().GeneratePdf();
+
+                _logger.LogInformation("✅ PDF check list  avalúo generado: {Bytes} bytes", pdfBytes.Length);
+                return await Task.FromResult(pdfBytes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error al generar PDF para check list  avalúo ID {AvaluoId}", data.Avaluo.Id);
+                throw;
+            }
+        }
+        public async Task<byte[]> GuardarPdfCheckListAsync(CheckListAvaluoCompletoPdf data, string numeroAvaluo)
+        {
+            try
+            {
+                var pdfBytes = await GenerarPdfCheckListAsync(data);
                 return pdfBytes;
             }
             catch (Exception ex)

@@ -307,8 +307,6 @@ namespace CarSlineAPI.Models.DTOs
         public decimal PrecioSolicitado { get; set; }
         public decimal PrecioAutorizado { get; set; }
     }
-
-
     public class AvaluoDatosSimplesResponse
     {
         public bool Success { get; set; }
@@ -317,7 +315,6 @@ namespace CarSlineAPI.Models.DTOs
         public string VehiculoCompleto { get; set; } = string.Empty;
         public string VIN { get; set; } = string.Empty;
     }
-
     public class AvaluoDetalleAvaluoIdResponse
     {
         public bool Success { get; set; }
@@ -356,7 +353,6 @@ namespace CarSlineAPI.Models.DTOs
         public int AvaluosInvestigacion { get; set; }
 
     }
-
     public class AvaluoDto
     {
         public int Id { get; set; }
