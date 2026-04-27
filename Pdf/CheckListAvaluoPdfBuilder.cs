@@ -6,9 +6,9 @@ using QuestPDF.Infrastructure;
 namespace CarSlineAPI.Pdf
 {
     /// <summary>
-    /// Construye el documento PDF de Órdenes de Servicio.
-    /// Contiene toda la lógica de layout: encabezado, secciones de cliente/vehículo,
-    /// trabajos, costos, observaciones y checklist.
+    /// Construye el documento PDF de Check List de Toma de Autos.
+    /// Secciones: encabezado, datos del vehículo/vendedor, accesorios,
+    /// llantas/batería, combustible/kilometraje, observaciones y firmas.
     /// </summary>
     public class CheckListAvaluoPdfBuilder : IPdfDocumentBuilder
     {
@@ -19,15 +19,14 @@ namespace CarSlineAPI.Pdf
         private static readonly string GrisClaro = Colors.Grey.Lighten2;
         private static readonly string GrisLighten3 = Colors.Grey.Lighten3;
 
-
-        public CheckListAvaluoPdfBuilder (CheckListAvaluoCompletoPdf checkList)
+        public CheckListAvaluoPdfBuilder(CheckListAvaluoCompletoPdf checkList)
         {
             _checkList = checkList;
             _logoPath = Path.Combine(AppContext.BaseDirectory, "Assets", "logo.png");
         }
 
         // -------------------------------------------------------
-        // Punto de entrada — requerido por IPdfDocumentBuilder
+        // Punto de entrada
         // -------------------------------------------------------
 
         public IDocument Build()
@@ -44,439 +43,465 @@ namespace CarSlineAPI.Pdf
                     page.PageColor(Colors.White);
                     page.DefaultTextStyle(x => x.FontSize(10).FontFamily("Arial"));
 
-                    page.Header().Element(c => CrearEncabezado(c));
-                    //page.Content().Element(c => CrearContenido(c));
-                    //page.Footer().Element(c => CrearPiePagina(c));
+                    page.Header().Element(CrearEncabezado);
+                    page.Content().Element(CrearContenido);
+                    page.Footer().Element(CrearPiePagina);
                 });
             });
         }
 
         // -------------------------------------------------------
-        // Secciones principales
+        // ENCABEZADO
         // -------------------------------------------------------
 
         private void CrearEncabezado(IContainer container)
         {
-            string folio = $"Folio: {_checkList.Avaluo.Id:D6}";
+            string folio = $"Folio Avaluo: {_checkList.Avaluo.Id:D6}";
+
             container.Column(column =>
             {
                 column.Item().Row(row =>
                 {
                     row.RelativeItem().Column(col =>
                     {
-                        col.Item()
-                            .Height(35)
-                            .Image(_logoPath)
-                            .FitArea();
-                        col.Item().Text("📍 Las Palomas 590, El Portezuelo  ☎ Tel:\u00A0771-295-4232").FontSize(10).Italic();
+                        col.Item().Height(35).Image(_logoPath).FitArea();
+                        col.Item().Text("📍 Las Palomas 590, El Portezuelo  ☎ Tel:\u00A0771-295-4232")
+                            .FontSize(10).Italic();
                     });
 
                     row.RelativeItem().Column(col =>
                     {
-                        col.Item().Text(folio).AlignRight().FontSize(11).Bold().FontColor(Colors.Grey.Darken2);
-                        col.Item().PaddingTop(5).Text("CHECK LIST TOMA DE AUTOS").AlignCenter().FontSize(20).Bold().FontColor(RojoOscuro).Italic();
+                        col.Item().Text(folio)
+                            .AlignRight().FontSize(11).Bold().FontColor(Colors.Grey.Darken2);
+                        col.Item().PaddingTop(2)
+                            .Text("CHECK LIST")
+                            .AlignCenter().FontSize(15).Bold().FontColor(RojoOscuro).Italic();
+                        col.Item().PaddingTop(1)
+                            .Text("TOMA DE AUTOS")
+                            .AlignCenter().FontSize(12).Bold().FontColor(RojoOscuro);
                     });
                 });
 
-                column.Item().PaddingTop(5).LineHorizontal(2).LineColor(Colors.Red.Darken2);
+                column.Item().PaddingTop(5).LineHorizontal(2).LineColor(RojoOscuro);
             });
         }
-        /*
+
+        // -------------------------------------------------------
+        // CONTENIDO PRINCIPAL
+        // -------------------------------------------------------
+
         private void CrearContenido(IContainer container)
         {
             container.PaddingTop(5).Column(column =>
             {
-                column.Item().Element(c => SeccionClienteVehiculo(c));
+                // 1. Datos del vehículo y vendedor
+                column.Item().Element(SeccionVehiculoVendedor);
 
-                column.Item().PaddingTop(10).Element(c => SeccionTrabajos(c));
+                // 2. Kilometraje y combustible
+                column.Item().PaddingTop(6).Element(SeccionKilometrajeCombustible);
 
-                if (!string.IsNullOrWhiteSpace(_orden.ObservacionesAsesor) ||
-                    !string.IsNullOrWhiteSpace(_orden.ObservacionesJefeTaller))
+                // 3. Accesorios — tabla principal de ítems
+                column.Item().PaddingTop(6).Element(SeccionAccesorios);
+
+                // 4. Llantas y batería
+                column.Item().PaddingTop(6).Element(SeccionLlantasBateria);
+
+                // 5. Observaciones / comentarios
+                if (_checkList.CheckList != null &&
+                    (!string.IsNullOrWhiteSpace(_checkList.CheckList.Comentarios) ||
+                     !string.IsNullOrWhiteSpace(_checkList.CheckList.Observaciones)))
                 {
-                    column.Item().PaddingTop(15).Element(c => SeccionObservaciones(c));
+                    column.Item().PaddingTop(6).Element(SeccionObservaciones);
                 }
 
-                column.Item().PaddingTop(8).Element(c => SeccionCostos(c));
-
-                if (_orden.CheckList != null)
-                {
-                    column.Item().PaddingTop(40).PageBreak();
-                    column.Item().Element(c => SeccionCheckList(c, _orden.CheckList));
-                }
+                // 6. Firmas — empujado al fondo de la página
+                column.Item().ExtendVertical().AlignBottom().Element(SeccionFirmas);
             });
         }
 
         // -------------------------------------------------------
-        // Secciones de detalle
+        // SECCIÓN 1 — Vehículo y vendedor
         // -------------------------------------------------------
 
-        private void SeccionClienteVehiculo(IContainer container)
+        private void SeccionVehiculoVendedor(IContainer container)
         {
-            container.Column(column =>
+            var a = _checkList.Avaluo;
+            var c = _checkList.CheckList;
+
+            container.Border(1).BorderColor(GrisClaro).Padding(6).Column(col =>
             {
-                column.Item().Row(row =>
+                col.Item().Text("VEHÍCULO").FontSize(9).Bold().FontColor(RojoOscuro).AlignCenter();
+
+                // Fila 1: Marca / Modelo / Versión / Color
+                col.Item().PaddingTop(3).Row(row =>
                 {
-                    // Cliente
-                    row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
-                        .PaddingTop(5).PaddingBottom(5).PaddingRight(10).PaddingLeft(10).Column(col =>
+                    CeldaInfo(row.RelativeItem(), "Marca:", a.Marca);
+                    CeldaInfo(row.RelativeItem(), "Modelo:", a.Modelo);
+                    CeldaInfo(row.RelativeItem(), "Versión:", a.Version);
+                    CeldaInfo(row.RelativeItem(), "Color:", a.Color ?? "—");
+                });
+
+                // Fila 2: Año / VIN / Placas / (vacío)
+                col.Item().PaddingTop(4).Row(row =>
+                {
+                    CeldaInfo(row.RelativeItem(), "Año:", a.Anio.ToString());
+                    CeldaInfo(row.RelativeItem(), "VIN:", a.VIN);
+
+                    row.RelativeItem(2).Text(txt =>
+                    {
+                        var label = string.IsNullOrWhiteSpace(a.PlacasEdo)
+                            ? "Placas:"
+                            : $"Placas {a.PlacasEdo}:";
+                        txt.Span(label).FontSize(8).FontColor(Colors.Grey.Darken2);
+                        txt.Span(" " + (string.IsNullOrWhiteSpace(a.Placas) ? "S/P" : a.Placas))
+                            .FontSize(8).Bold();
+                    });
+                });
+
+                // Fila 3: Vendedor y teléfonos
+                col.Item().PaddingTop(4).Row(row =>
+                {
+                    row.ConstantItem(220).Text(txt =>
+                    {
+                        txt.Span("Vendedor: ").FontSize(9).FontColor(Colors.Grey.Darken2);
+                        txt.Span(a.NombreCompleto).FontSize(9).Bold();
+                    });
+
+                    row.ConstantItem(90).Text(txt =>
+                    {
+                        txt.Span("Tel: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                        txt.Span(a.Telefono1).FontSize(9).Bold();
+                    });
+
+                    if (!string.IsNullOrWhiteSpace(a.Telefono2))
+                    {
+                        row.ConstantItem(90).Text(txt =>
                         {
-                            col.Item().Text("CLIENTE").FontSize(11).Bold()
-                                .FontColor(Colors.Red.Darken2);
-                            col.Item().PaddingTop(3).Text(_orden.Cliente.NombreCompleto)
-                                .FontSize(10).Bold();
-
-                            if (!string.IsNullOrEmpty(_orden.Cliente.RFC))
-                                col.Item().PaddingTop(2).Text($"RFC: {_orden.Cliente.RFC}").FontSize(9);
-                            else
-                                col.Item().PaddingTop(2).Text("RFC: XXXXXXXXXXXXX").FontSize(9);
-
-                            col.Item().Text($"Tel: {_orden.Cliente.TelefonoMovil}").FontSize(9);
-
-                            if (!string.IsNullOrEmpty(_orden.Cliente.CorreoElectronico))
-                                col.Item().Text($"Email: {_orden.Cliente.CorreoElectronico}").FontSize(9);
+                            txt.Span("Tel 2: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                            txt.Span(a.Telefono2).FontSize(9).Bold();
                         });
+                    }
+                });
 
-                    row.ConstantItem(20);
+            });
+        }
 
-                    // Vehículo
-                    row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
-                        .PaddingTop(5).PaddingBottom(5).PaddingRight(10).PaddingLeft(10).Column(col =>
+        // -------------------------------------------------------
+        // SECCIÓN 2 — Kilometraje y combustible
+        // -------------------------------------------------------
+
+        private void SeccionKilometrajeCombustible(IContainer container)
+        {
+            var c = _checkList.CheckList;
+            if (c == null) return;
+
+            container.Row(row =>
+            {
+                // Kilometraje
+                row.RelativeItem().Border(1).BorderColor(GrisClaro).Padding(6).Column(col =>
+                {
+                    col.Item().Text("KILOMETRAJE").FontSize(7).Bold()
+                        .FontColor(RojoOscuro).AlignCenter();
+                    col.Item().PaddingTop(4).Text($"{c.Kilometraje:N0} km")
+                        .FontSize(12).Bold().AlignCenter();
+                });
+
+                row.ConstantItem(10);
+
+                // Combustible — barra gráfica
+                row.RelativeItem().Border(1).BorderColor(GrisClaro).Padding(4).Column(col =>
+                {
+                    col.Item().Text("NIVEL DE COMBUSTIBLE").FontSize(7).Bold()
+                        .FontColor(RojoOscuro).AlignCenter();
+
+                    col.Item().PaddingTop(2).Row(barRow =>
+                    {
+                        // 8 divisiones (0 = vacío … 8 = lleno)
+                        byte nivel = c.Combustible ?? 0;
+                        for (int i = 1; i <= 8; i++)
                         {
-                            col.Item().Text("VEHÍCULO").FontSize(11).Bold()
-                                .FontColor(Colors.Red.Darken2);
-                            col.Item().PaddingTop(3).Text(_orden.Vehiculo.VehiculoCompleto)
-                                .FontSize(10).Bold();
-                            col.Item().PaddingTop(2).Text($"VIN: {_orden.Vehiculo.VIN}").FontSize(9);
+                            string bgColor = i <= nivel
+                                ? (nivel <= 2 ? Colors.Red.Medium
+                                 : nivel <= 5 ? Colors.Orange.Medium
+                                 : Colors.Green.Medium)
+                                : GrisClaro;
 
-                            if (!string.IsNullOrEmpty(_orden.Vehiculo.Placas))
-                                col.Item().Text($"Placas: {_orden.Vehiculo.Placas}").FontSize(9);
+                            barRow.RelativeItem()
+                                .Height(12)
+                                .Background(bgColor)
+                                .Border(0.5f).BorderColor(Colors.White);
+                        }
+                    });
 
-                            col.Item().Text($"Kilometraje: {_orden.Vehiculo.KilometrajeActual:N0} km")
-                                .FontSize(9).Bold();
-                        });
+                    // Etiquetas E / 1/2 / F
+                    col.Item().PaddingTop(2).Row(lblRow =>
+                    {
+                        lblRow.RelativeItem().Text("E").FontSize(7).AlignLeft();
+                        lblRow.RelativeItem().Text("1/2").FontSize(7).AlignCenter();
+                        lblRow.RelativeItem().Text("F").FontSize(7).AlignRight();
+                    });
                 });
             });
         }
 
-        private void SeccionTrabajos(IContainer container)
+        // -------------------------------------------------------
+        // SECCIÓN 3 — Accesorios (checklist de ítems booleanos)
+        // -------------------------------------------------------
+
+        private void SeccionAccesorios(IContainer container)
         {
-            container.Column(column =>
+            var c = _checkList.CheckList;
+            if (c == null) return;
+
+            // Definición de todos los ítems agrupados
+            var grupos = new[]
             {
-                column.Item().Background(Colors.Red.Darken2).Padding(3)
-                    .Text("TRABAJOS REALIZADOS").FontSize(11).Bold()
-                    .FontColor(Colors.White);
-
-                column.Item().PaddingTop(5);
-
-                foreach (var trabajo in _orden.Trabajos)
+                ("HERRAMIENTA", new (string, bool)[]
                 {
-                    column.Item().PaddingBottom(5).Border(1).EnsureSpace(200)
-                        .BorderColor(Colors.Grey.Lighten2).PaddingTop(8).PaddingBottom(5).PaddingRight(10).PaddingLeft(10).Column(col =>
-                        {
-                            col.Item().Row(row =>
-                            {
-                                row.RelativeItem().Text(trabajo.Trabajo).FontSize(11).Bold();
+                    ("Gato",                c.Gato),
+                    ("Llave cruz / L",   c.LlaveLoCruz),
+                    ("Gancho de arrastre",  c.GanchoArrastre),
+                    ("Maneral",             c.Maneral),
+                    ("Varillas (Pick Up)",  c.VarillasPickUp),
+                    ("Batería",             c.Bateria),
+                    ("Llanta Refacción",    c.Refaccion),
+                }),
+                ("LLAVE / SEGURIDAD", new (string, bool)[]
+                {
+                    ("Duplicado de llave",  c.DuplicadoLlave),
+                    ("Birlo de seguridad",  c.BirloSeguridad),
+                    ("Candado de seguridad",c.CandadoSeguridad),
+                }),
+                ("EXTERIOR", new (string, bool)[]
+                {
 
-                                if (!string.IsNullOrEmpty(trabajo.TecnicoNombre))
-                                    row.ConstantItem(200).AlignRight()
-                                        .Text($"Técnico: {trabajo.TecnicoNombre}").FontSize(9).Italic();
+                    
+                    ("Rines",               c.Rines),
+                    ("Tapones de rin",             c.Tapones),
+                    ("Centro de rin",       c.CentroRin),
+                    ("Faros de niebla",     c.FarosNiebla),
+                    ("Limpiador delantero", c.LimpiadorDelantero),
+                    ("Limpiador trasero",   c.LimpiadorTrasero),
+                    ("Tapon de Gasolina",   c.TaponGasolina),
+                    ("Antena de radio",        c.AntenaRadio),
 
-                                row.ConstantItem(80).AlignRight()
-                                    .Text(trabajo.EstadoTrabajo).FontSize(9).Bold()
-                                    .FontColor(Colors.Green.Darken2);
-                            });
+                }),
+                ("INTERIOR", new (string, bool)[]
+                {
+                    ("Radio / Estéreo",     c.RadioEstereo),
+                    ("Viseras",             c.Viseras),
+                    ("Cabeceras",           c.Cabeceras),
+                    ("Tapetes",             c.Tapetes),
+                    ("Encendedor",          c.Encendedor),
+                    ("Maletín",             c.Maletin),
+                    ("Cubresala",           c.Cubresala),
+                    ("Cubrevolante",        c.Cubrevolante),
+                    ("Tapa cajuela",        c.TapaCajuela),
+                    ("Cortina cajuela",     c.CortinaCajuela),
+                }),
+            };
 
-                            if (trabajo.Refacciones != null && trabajo.Refacciones.Any())
-                            {
-                                col.Item().PaddingTop(2).Column(c =>
-                                {
-                                    c.Item().PaddingTop(4).Table(table =>
-                                    {
-                                        table.ColumnsDefinition(columns =>
-                                        {
-                                            columns.RelativeColumn(3);
-                                            columns.ConstantColumn(50);
-                                            columns.ConstantColumn(70);
-                                            columns.ConstantColumn(80);
-                                        });
-
-                                        table.Header(header =>
-                                        {
-                                            header.Cell().Background(Colors.Grey.Lighten3).Padding(4)
-                                                .Text("Refacciones Cargadas").FontSize(9).Bold();
-                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter().Padding(2)
-                                                .Text("Cant.").FontSize(9).Bold();
-                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter().Padding(2)
-                                                .Text("P. Unit.").FontSize(9).Bold();
-                                            header.Cell().Background(Colors.Grey.Lighten3).AlignCenter().Padding(2)
-                                                .Text("Total").FontSize(9).Bold();
-                                        });
-
-                                        foreach (var refaccion in trabajo.Refacciones)
-                                        {
-                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .Padding(4).Text(refaccion.Refaccion).FontSize(8);
-                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .AlignCenter().Padding(3).Text(refaccion.Cantidad.ToString()).FontSize(8);
-                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .AlignCenter().Padding(3).Text($"${refaccion.PrecioUnitario:N2}").FontSize(8);
-                                            table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                                                .AlignCenter().Padding(3).Text($"${refaccion.Total:N2}").FontSize(8).Bold();
-                                        }
-                                    });
-                                });
-                            }
-
-                            if (trabajo.TotalRefacciones > 0 || trabajo.CostoManoObra > 0)
-                            {
-                                col.Item().PaddingTop(4).EnsureSpace(200).Row(row =>
-                                {
-                                    row.RelativeItem();
-                                    row.ConstantItem(180).Column(c =>
-                                    {
-                                        if (trabajo.TotalRefacciones > 0)
-                                            c.Item().Row(r =>
-                                            {
-                                                r.RelativeItem().Text("Refacciones:").AlignLeft().FontSize(9);
-                                                r.ConstantItem(70).AlignLeft()
-                                                    .Text($"${trabajo.TotalRefacciones:N2}").Bold().FontSize(9);
-                                            });
-
-                                        if (trabajo.CostoManoObra > 0)
-                                            c.Item().PaddingTop(3).Row(r =>
-                                            {
-                                                r.RelativeItem().Text("Mano de Obra:").AlignLeft().FontSize(9);
-                                                r.ConstantItem(70).AlignLeft()
-                                                    .Text($"${trabajo.CostoManoObra:N2}").Bold().FontSize(9);
-                                            });
-                                    });
-                                });
-                            }
-
-                            if (!string.IsNullOrEmpty(trabajo.ComentariosTecnico))
-                            {
-                                col.Item().PaddingTop(2).Background(Colors.Blue.Lighten4)
-                                    .PaddingRight(8).PaddingTop(3).PaddingBottom(3).PaddingLeft(8).Column(c =>
-                                    {
-                                        c.Item().Text("Comentarios del Técnico:").FontSize(9).Bold();
-                                        c.Item().Text(trabajo.ComentariosTecnico).FontSize(9);
-                                    });
-                            }
-                        });
-                }
-            });
-        }
-
-        private void SeccionCostos(IContainer container)
-        {
             container.Column(column =>
             {
-                column.Item().AlignRight().Width(250).Border(1).EnsureSpace(200)
-                    .BorderColor(Colors.Red.Darken2).PaddingTop(5).PaddingBottom(5).PaddingLeft(10).PaddingRight(10).Column(col =>
+                column.Item().Background(RojoOscuro).Padding(3)
+                    .Text("ACCESORIOS / CHECKLIST").FontSize(9).Bold().FontColor(Colors.White);
+
+                column.Item().PaddingTop(4).Table(table =>
+                {
+                    // 4 columnas: nombre | ✓✗  | nombre | ✓✗
+                    table.ColumnsDefinition(cols =>
                     {
-                        col.Item().Text("RESUMEN DE COSTOS").FontSize(10).Bold()
-                            .FontColor(Colors.Red.Darken2).AlignCenter();
-
-                        col.Item().PaddingTop(5).Row(row =>
-                        {
-                            row.RelativeItem().Text("Refacciones:").FontSize(9);
-                            row.ConstantItem(100).AlignRight()
-                                .Text($"${_orden.TotalRefacciones:N2}").Bold().FontSize(9);
-                        });
-
-                        col.Item().PaddingTop(3).Row(row =>
-                        {
-                            row.RelativeItem().Text("Mano de Obra:").FontSize(9);
-                            row.ConstantItem(100).AlignRight()
-                                .Text($"${_orden.TotalManoObra:N2}").Bold().FontSize(9);
-                        });
-
-                        col.Item().PaddingTop(3).LineHorizontal(1).LineColor(Colors.Black);
-
-                        col.Item().PaddingTop(5).Row(row =>
-                        {
-                            row.RelativeItem().Text("Subtotal:").FontSize(9);
-                            row.ConstantItem(100).AlignRight()
-                                .Text($"${_orden.CostoTotal:N2}").Bold().FontSize(9);
-                        });
-
-                        col.Item().PaddingTop(2).Row(row =>
-                        {
-                            row.RelativeItem().Text("IVA: 16%").FontSize(9);
-                            row.ConstantItem(100).AlignRight()
-                                .Text($"${_orden.CostoTotal * 0.16m:N2}").Bold().FontSize(9);
-                        });
-
-                        col.Item().PaddingTop(4).Background(Colors.Red.Darken2)
-                            .Padding(3).Row(row =>
-                            {
-                                row.RelativeItem().Text("TOTAL")
-                                    .FontSize(11).Bold().FontColor(Colors.White);
-                                row.ConstantItem(100).AlignRight()
-                                    .Text($"${_orden.CostoTotal_IVA:N2}")
-                                    .FontSize(11).Bold().FontColor(Colors.White);
-                            });
+                        cols.RelativeColumn(3);
+                        cols.ConstantColumn(22);
+                        cols.RelativeColumn(3);
+                        cols.ConstantColumn(22);
+                        cols.RelativeColumn(3);
+                        cols.ConstantColumn(22);
+                        cols.RelativeColumn(3);
+                        cols.ConstantColumn(22);
                     });
+
+                    foreach (var (titulo, items) in grupos)
+                    {
+                        // Encabezado del grupo — ocupa las 4 columnas
+                        table.Cell().ColumnSpan(8)
+                            .Background(GrisLighten3).Padding(3)
+                            .Text(titulo).FontSize(8).Bold().FontColor(Colors.Grey.Darken3);
+
+                        // Filas de ítems en dos columnas
+                        for (int i = 0; i < items.Length; i += 4)
+                        {
+                            FilaCheckItem(table, items[i].Item1, items[i].Item2);
+
+                            if (i + 1 < items.Length)
+                                FilaCheckItem(table, items[i + 1].Item1, items[i + 1].Item2);
+                            else
+                            {
+                                table.Cell().BorderBottom(1).BorderColor(GrisClaro).Padding(3);
+                                table.Cell().BorderBottom(1).BorderColor(GrisClaro).Padding(3);
+                            }
+
+                            if (i + 2 < items.Length)
+                                FilaCheckItem(table, items[i + 2].Item1, items[i + 2].Item2);
+                            else
+                            {
+                                table.Cell().BorderBottom(1).BorderColor(GrisClaro).Padding(3);
+                                table.Cell().BorderBottom(1).BorderColor(GrisClaro).Padding(3);
+                            }
+
+                            if (i + 3 < items.Length)
+                                FilaCheckItem(table, items[i + 3].Item1, items[i + 3].Item2);
+                            else
+                            {
+                                table.Cell().BorderBottom(1).BorderColor(GrisClaro).Padding(3);
+                                table.Cell().BorderBottom(1).BorderColor(GrisClaro).Padding(3);
+                            }
+                        }
+                    }
+                });
             });
         }
+
+        // -------------------------------------------------------
+        // SECCIÓN 4 — Llantas y batería
+        // -------------------------------------------------------
+
+        private void SeccionLlantasBateria(IContainer container)
+        {
+            var c = _checkList.CheckList;
+            if (c == null) return;
+
+            container.Column(column =>
+            {
+                column.Item().Background(RojoOscuro).Padding(3)
+                    .Text("LLANTAS Y BATERÍA").FontSize(9).Bold().FontColor(Colors.White);
+
+                column.Item().PaddingTop(4).Table(table =>
+                {
+                    table.ColumnsDefinition(cols =>
+                    {
+                        cols.RelativeColumn(2);
+                        cols.RelativeColumn(2);
+                        cols.RelativeColumn(2);
+                        cols.RelativeColumn(2);
+                    });
+
+                    // Encabezados
+                    foreach (var h in new[] { "DELANTERA DER.", "DELANTERA IZQ.", "TRASERA DER.", "TRASERA IZQ." })
+                    {
+                        table.Cell().Background(GrisLighten3).Padding(3)
+                            .Text(h).FontSize(8).Bold().AlignCenter();
+                    }
+
+                    CeldaLlantaCompleta(table, c.MarcaLlantaDelanteraDer, c.MedidaLlantaDelanteraDer);
+                    CeldaLlantaCompleta(table, c.MarcaLlantaDelanteraIzq, c.MedidaLlantaDelanteraIzq);
+                    CeldaLlantaCompleta(table, c.MarcaLlantaTraseraDer, c.MedidaLlantaTraseraDer);
+                    CeldaLlantaCompleta(table, c.MarcaLlantaTraseraIzq, c.MedidaLlantaTraseraIzq);
+                });
+
+                // Refacción y batería en la misma fila
+                column.Item().PaddingTop(5).Row(row =>
+                {
+                    // Llanta de refacción
+                    row.RelativeItem().Border(1).BorderColor(GrisClaro).Padding(5).Column(col =>
+                    {
+                        col.Item().Text("LLANTA DE REFACCIÓN").FontSize(8).Bold()
+                            .FontColor(RojoOscuro).AlignCenter();
+                        col.Item().PaddingTop(3).Row(r =>
+                        {
+                            r.RelativeItem().Text(txt =>
+                            {
+                                txt.Span("Marca: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                                txt.Span(c.MarcaLlantaRefaccion ?? "—").FontSize(8).Bold();
+                            });
+                            r.RelativeItem().Text(txt =>
+                            {
+                                txt.Span("Medida: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                                txt.Span(c.MedidaLlantaRefaccion ?? "—").FontSize(8).Bold();
+                            });
+                        });
+                    });
+
+                    row.ConstantItem(10);
+
+                    // Batería
+                    row.RelativeItem().Border(1).BorderColor(GrisClaro).Padding(5).Column(col =>
+                    {
+                        col.Item().Text("BATERÍA").FontSize(8).Bold()
+                            .FontColor(RojoOscuro).AlignCenter();
+                        col.Item().PaddingTop(3).Text(txt =>
+                        {
+                            txt.Span("Marca: ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                            txt.Span(c.MarcaBateria ?? "—").FontSize(8).Bold();
+                        });
+                    });
+                });
+            });
+        }
+
+        // -------------------------------------------------------
+        // SECCIÓN 5 — Observaciones
+        // -------------------------------------------------------
 
         private void SeccionObservaciones(IContainer container)
         {
+            var c = _checkList.CheckList;
+            if (c == null) return;
+
             container.Column(column =>
             {
-                if (!string.IsNullOrWhiteSpace(_orden.ObservacionesAsesor))
-                {
-                    column.Item().Border(1).BorderColor(Colors.Orange.Lighten2)
-                        .Padding(5).Column(col =>
-                        {
-                            col.Item().Text("OBSERVACIONES DEL ASESOR")
-                                .FontSize(10).Bold().FontColor(Colors.Orange.Darken2);
-                            col.Item().PaddingTop(5).Text(_orden.ObservacionesAsesor).FontSize(9);
-                        });
-                }
+                column.Item().Background(RojoOscuro).Padding(3)
+                    .Text("OBSERVACIONES").FontSize(9).Bold().FontColor(Colors.White);
 
-                if (!string.IsNullOrWhiteSpace(_orden.ObservacionesJefeTaller))
+                if (!string.IsNullOrWhiteSpace(c.Comentarios))
                 {
-                    column.Item().PaddingTop(10).Border(1).BorderColor(Colors.Blue.Lighten2)
-                        .Padding(5).Column(col =>
-                        {
-                            col.Item().Text("OBSERVACIONES DEL JEFE DE TALLER")
-                                .FontSize(10).Bold().FontColor(Colors.Blue.Darken2);
-                            col.Item().PaddingTop(5).Text(_orden.ObservacionesJefeTaller).FontSize(9);
-                        });
-                }
-            });
-        }
-
-        private void SeccionCheckList(IContainer container, CheckListPdfDto checkList)
-        {
-            container.Column(column =>
-            {
-                column.Item().Background(Colors.Red.Darken2).Padding(8)
-                    .Text("CHECKLIST DE SERVICIO").FontSize(13).Bold()
-                    .FontColor(Colors.White);
-
-                column.Item().PaddingTop(20).Table(table =>
-                {
-                    table.ColumnsDefinition(columns =>
+                    column.Item().PaddingTop(4).Border(1).BorderColor(GrisClaro).Padding(5).Column(col =>
                     {
-                        columns.RelativeColumn(2);
-                        columns.RelativeColumn(1);
-                        columns.RelativeColumn(2);
-                        columns.RelativeColumn(1);
+                        col.Item().Text("Comentarios:").FontSize(8).Bold().FontColor(Colors.Grey.Darken2);
+                        col.Item().PaddingTop(2).Text(c.Comentarios).FontSize(9);
                     });
+                }
 
-                    AgregarSeccionCheckList(table, "SISTEMA DE DIRECCIÓN",
-                        ("Bieletas", checkList.Bieletas),
-                        ("Terminales de Dirección", checkList.Terminales),
-                        ("Caja de Dirección", checkList.CajaDireccion),
-                        ("Volante", checkList.Volante));
-
-                    AgregarSeccionCheckList(table, "SISTEMA DE SUSPENSIÓN",
-                        ("Amortiguadores Delanteros", checkList.AmortiguadoresDelanteros),
-                        ("Barra Estabilizadora", checkList.BarraEstabilizadora),
-                        ("Amortiguadores Traseros", checkList.AmortiguadoresTraseros),
-                        ("Horquillas", checkList.Horquillas));
-
-                    AgregarSeccionCheckList(table, "NEUMÁTICOS",
-                        ("Delanteros", checkList.NeumaticosDelanteros),
-                        ("Balanceo", checkList.Balanceo),
-                        ("Traseros", checkList.NeumaticosTraseros),
-                        ("Alineación", checkList.Alineacion));
-
-                    AgregarSeccionCheckList(table, "LUCES",
-                        ("Altas", checkList.LucesAltas),
-                        ("Bajas", checkList.LucesBajas),
-                        ("Antiniebla", checkList.LucesAntiniebla),
-                        ("Reversa", checkList.LucesReversa),
-                        ("Direccionales", checkList.LucesDireccionales),
-                        ("Intermitentes", checkList.LucesIntermitentes));
-
-                    AgregarSeccionCheckList(table, "SISTEMA DE FRENOS",
-                        ("Discos/Tambores Delanteros", checkList.DiscosTamboresDelanteros),
-                        ("Balatas Delanteras", checkList.BalatasDelanteras),
-                        ("Discos/Tambores Traseros", checkList.DiscosTamboresTraseros),
-                        ("Balatas Traseras", checkList.BalatasTraseras));
-                });
-
-                column.Item().PaddingTop(20).Row(row =>
+                if (!string.IsNullOrWhiteSpace(c.Observaciones))
                 {
-                    row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
-                        .Padding(8).Column(col =>
-                        {
-                            col.Item().Background(Colors.Red.Darken2).Padding(3)
-                                .Text("PIEZAS REEMPLAZADAS").FontSize(10).Bold().FontColor(Colors.White);
-                            AgregarCheckItem(col, "Aceite de Motor", checkList.ReemplazoAceiteMotor);
-                            AgregarCheckItem(col, "Filtro Aceite", checkList.ReemplazoFiltroAceite);
-                            AgregarCheckItem(col, "Filtro Aire Motor", checkList.ReemplazoFiltroAireMotor);
-                            AgregarCheckItem(col, "Filtro Aire Polen", checkList.ReemplazoFiltroAirePolen);
-                        });
-
-                    row.ConstantItem(20);
-
-                    row.RelativeItem().Border(1).BorderColor(Colors.Grey.Lighten2)
-                        .Padding(8).Column(col =>
-                        {
-                            col.Item().Background(Colors.Red.Darken2).Padding(3)
-                                .Text("TRABAJOS REALIZADOS").FontSize(10).Bold().FontColor(Colors.White);
-                            AgregarCheckItem(col, "Descristalización de Discos/Tambores", checkList.DescristalizacionTamboresDiscos);
-                            AgregarCheckItem(col, "Ajuste de Frenos", checkList.AjusteFrenos);
-                            AgregarCheckItem(col, "Calibración de Presión de Neumáticos", checkList.CalibracionPresionNeumaticos);
-                            AgregarCheckItem(col, "Torque de birlos de rueda", checkList.TorqueNeumaticos);
-                            AgregarCheckItem(col, "Rotación de Neumáticos", checkList.RotacionNeumaticos);
-                        });
-                });
+                    column.Item().PaddingTop(4).Border(1).BorderColor(GrisClaro).Padding(5).Column(col =>
+                    {
+                        col.Item().Text("Observaciones:").FontSize(8).Bold().FontColor(Colors.Grey.Darken2);
+                        col.Item().PaddingTop(2).Text(c.Observaciones).FontSize(9);
+                    });
+                }
             });
         }
 
         // -------------------------------------------------------
-        // Helpers reutilizables
+        // SECCIÓN 6 — Firmas
         // -------------------------------------------------------
-
-        private static void AgregarSeccionCheckList(TableDescriptor table, string titulo,
-            params (string nombre, string valor)[] items)
+        private void SeccionFirmas(IContainer container)
         {
-            table.Cell().ColumnSpan(4).Background(Colors.Grey.Lighten3)
-                .Padding(5).Text(titulo).FontSize(9).Bold();
-
-            for (int i = 0; i < items.Length; i += 2)
+            container.PaddingTop(10).AlignCenter().Row(row =>
             {
-                table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                    .Padding(5).Text(items[i].nombre).FontSize(8);
-                table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                    .Padding(5).Text(items[i].valor).FontSize(8).Bold();
+                row.ConstantItem(180).Element(x =>
+                    LineaFirma(x, _checkList.Avaluo.AsesorNombre, "Asesor")
+                );
 
-                if (i + 1 < items.Length)
-                {
-                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                        .Padding(5).Text(items[i + 1].nombre).FontSize(8);
-                    table.Cell().BorderBottom(1).BorderColor(Colors.Grey.Lighten2)
-                        .Padding(5).Text(items[i + 1].valor).FontSize(8).Bold();
-                }
-                else
-                {
-                    table.Cell().ColumnSpan(2).BorderBottom(1).BorderColor(Colors.Grey.Lighten2);
-                }
-            }
-        }
+                row.ConstantItem(40); // espacio entre firmas
 
-        private static void AgregarCheckItem(ColumnDescriptor column, string texto, bool valor)
-        {
-            column.Item().PaddingTop(3).Row(row =>
-            {
-                row.ConstantItem(15).Text(valor ? "✓" : "✗")
-                    .FontColor(valor ? Colors.Green.Medium : Colors.Red.Medium);
-                row.RelativeItem().Text(texto).FontSize(8);
+                row.ConstantItem(180).Element(x =>
+                    LineaFirma(x, _checkList.CheckList.VigilanteNombre, "Vigilante")
+                );
             });
         }
+        // -------------------------------------------------------
+        // PIE DE PÁGINA
+        // -------------------------------------------------------
 
         private void CrearPiePagina(IContainer container)
         {
             container.AlignBottom().Column(column =>
             {
-                column.Item().LineHorizontal(1).LineColor(Colors.Grey.Lighten2);
+                column.Item().LineHorizontal(1).LineColor(GrisClaro);
 
-                column.Item().PaddingTop(10).Row(row =>
+                column.Item().PaddingTop(5).Row(row =>
                 {
                     row.RelativeItem().Text(txt =>
                     {
@@ -484,7 +509,7 @@ namespace CarSlineAPI.Pdf
                         txt.Span(DateTime.Now.ToString("dd/MMM/yyyy HH:mm")).FontSize(8).Bold();
                     });
 
-                    row.ConstantItem(100).AlignRight().Text(txt =>
+                    row.ConstantItem(120).AlignRight().Text(txt =>
                     {
                         txt.Span("Página ").FontSize(8);
                         txt.CurrentPageNumber().FontSize(8).Bold();
@@ -494,7 +519,80 @@ namespace CarSlineAPI.Pdf
                 });
             });
         }
-        */
 
+        // -------------------------------------------------------
+        // HELPERS
+        // -------------------------------------------------------
+
+        /// <summary>Celda de info estilo label: valor.</summary>
+        private static void CeldaInfo(IContainer slot, string label, string valor)
+        {
+            slot.Text(txt =>
+            {
+                txt.Span(label + " ").FontSize(8).FontColor(Colors.Grey.Darken2);
+                txt.Span(valor).FontSize(8).Bold();
+            });
+        }
+
+        /// <summary>Par de celdas nombre | ✓✗ para la tabla de 4 columnas.</summary>
+        private static void FilaCheckItem(TableDescriptor table, string nombre, bool valor)
+        {
+            table.Cell().BorderBottom(1).BorderColor(GrisClaro).Padding(3)
+                .Text(nombre).FontSize(8);
+
+            table.Cell().BorderBottom(1).BorderColor(GrisClaro).AlignCenter().Padding(2)
+                .Text(valor ? "✓" : "✗").FontSize(9).Bold()
+                .FontColor(valor ? Colors.Green.Darken2 : Colors.Red.Medium);
+        }
+
+        private static void CeldaLlantaCompleta(TableDescriptor table, string? marca, string? medida)
+        {
+            table.Cell()
+                .AlignCenter()
+                .Padding(3)
+                .Text(txt =>
+                {
+                    // Marca (más visible)
+                    txt.Span(string.IsNullOrWhiteSpace(marca) ? "—" : marca)
+                       .FontSize(8)
+                       .Bold();
+
+                    // Separador
+                    txt.Span(" ");
+
+                    // Medida (más ligera)
+                    txt.Span(string.IsNullOrWhiteSpace(medida) ? "" : $"( {medida} )")
+                       .FontSize(7.5f)
+                       .FontColor(Colors.Grey.Darken2);
+                });
+        }
+
+        /// <summary>Línea de firma con etiqueta debajo.</summary>
+        private void LineaFirma(IContainer container, string nombre, string puesto)
+        {
+            container.Column(col =>
+            {
+                // Línea de firma
+                col.Item().PaddingTop(25)
+                    .LineHorizontal(1)
+                    .LineColor(Colors.Grey.Darken1);
+
+                // Nombre
+                if (!string.IsNullOrWhiteSpace(nombre))
+                    col.Item().PaddingTop(4)
+                        .Text(nombre)
+                        .FontSize(9)
+                        .Bold()
+                        .AlignCenter();
+
+                // Puesto
+                if (!string.IsNullOrWhiteSpace(puesto))
+                    col.Item()
+                        .Text(puesto)
+                        .FontSize(8)
+                        .FontColor(Colors.Grey.Darken2)
+                        .AlignCenter();
+            });
+        }
     }
 }

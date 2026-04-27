@@ -820,6 +820,7 @@ namespace CarSlineAPI.Models.Entities
         public bool AvaluoMecanico { get; set; } = false;
         public bool FotografiasAvaluo { get; set; } = false;
         public bool VehiculoApto { get; set; } = true;
+        public bool CheckList { get; set; } = false;
         public bool VehiculoTomadoRevision { get; set; } = false;
         public bool VehiculoComprado { get; set; } = false;
 

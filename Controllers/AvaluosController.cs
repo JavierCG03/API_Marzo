@@ -135,26 +135,49 @@ namespace CarSlineAPI.Controllers
                         Success = false,
                         Message = "Avalúo no encontrado"
                     });
+                DocumentosAvaluo nuevaDocumentacion = null;
+                var documentacionExistente = await _db.DocumentosAvaluos
+                    .FirstOrDefaultAsync(d => d.AvaluoId == request.AvaluoId);
 
-                var Documentacion = new DocumentosAvaluo
+                if (documentacionExistente != null)
                 {
-                    AvaluoId = request.AvaluoId,
-                    AsesorId = request.AsesorId,
-                    CarnetServicios = request.CarnetServicios,
-                    UltimoServicioRegistrado = request.UltimoServicioRegistrado,
-                    UltimaTenenciaPagada = request.UltimaTenenciaPagada,
-                    UltimaVerificacionPagada = request.UltimaVerificacionPagada,
-                    FacturaOriginal = request.FacturaOriginal,
-                    NumeroDuenos = request.NumeroDuenos,
-                    Refacturaciones = request.Refacturaciones,
-                    DocumentacionCompleta = request.DocumentacionCompleta,
-                    ComentariosAvaluoDocumentos = request.ComentariosAvaluoDocumentos,
 
-                };
+                    documentacionExistente.AsesorId = request.AsesorId;
+                    documentacionExistente.CarnetServicios = request.CarnetServicios;
+                    documentacionExistente.UltimoServicioRegistrado = request.UltimoServicioRegistrado;
+                    documentacionExistente.UltimaTenenciaPagada = request.UltimaTenenciaPagada;
+                    documentacionExistente.UltimaVerificacionPagada = request.UltimaVerificacionPagada;
+                    documentacionExistente.FacturaOriginal = request.FacturaOriginal;
+                    documentacionExistente.NumeroDuenos = request.NumeroDuenos;
+                    documentacionExistente.Refacturaciones = request.Refacturaciones;
+                    documentacionExistente.DocumentacionCompleta = request.DocumentacionCompleta;
+                    documentacionExistente.ComentariosAvaluoDocumentos = request.ComentariosAvaluoDocumentos;
 
+                    _db.DocumentosAvaluos.Update(documentacionExistente);
+                }
+                else
+                {
+                    nuevaDocumentacion = new DocumentosAvaluo
+                    {
+                        AvaluoId = request.AvaluoId,
+                        AsesorId = request.AsesorId,
+                        CarnetServicios = request.CarnetServicios,
+                        UltimoServicioRegistrado = request.UltimoServicioRegistrado,
+                        UltimaTenenciaPagada = request.UltimaTenenciaPagada,
+                        UltimaVerificacionPagada = request.UltimaVerificacionPagada,
+                        FacturaOriginal = request.FacturaOriginal,
+                        NumeroDuenos = request.NumeroDuenos,
+                        Refacturaciones = request.Refacturaciones,
+                        DocumentacionCompleta = request.DocumentacionCompleta,
+                        ComentariosAvaluoDocumentos = request.ComentariosAvaluoDocumentos,
+                    };
+
+                    _db.DocumentosAvaluos.Add(nuevaDocumentacion);
+                }
+
+                // Siempre marcar como que ya tiene documentación
                 avaluo.AvaluoDocumentos = true;
 
-                _db.DocumentosAvaluos.Add(Documentacion);
                 await _db.SaveChangesAsync();
 
                 _logger.LogInformation(
@@ -163,17 +186,19 @@ namespace CarSlineAPI.Controllers
                 return Ok(new CrearDocumentacionResponse
                 {
                     Success = true,
-                    Message = "Equipamiento registrado exitosamente",
-                    DocumentacionId = Documentacion.Id
+                    Message = documentacionExistente != null
+                        ? "Documentación actualizada correctamente"
+                        : "Documentación registrada exitosamente",
+                    DocumentacionId = documentacionExistente?.Id ?? nuevaDocumentacion.Id
                 });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, $"Error al registrar equipamiento del avalúo {request.AvaluoId}");
+                _logger.LogError(ex, $"Error al registrar documentacion del avalúo {request.AvaluoId}");
                 return StatusCode(500, new CrearDocumentacionResponse
                 {
                     Success = false,
-                    Message = "Error al registrar equipamiento"
+                    Message = "Error al registrar documentacion de equipamiento"
                 });
             }
         }

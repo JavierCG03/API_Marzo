@@ -78,6 +78,7 @@ namespace CarSlineAPI.Controllers
                     MapearDesdeRequest(nuevo, request);
                     _db.CheckListAvaluos.Add(nuevo);
                     _logger.LogInformation("CheckList avalúo {AvaluoId} creado", request.AvaluoId);
+                    avaluo.CheckList = true;
                 }
 
                 await _db.SaveChangesAsync();

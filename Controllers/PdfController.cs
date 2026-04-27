@@ -171,8 +171,37 @@ namespace CarSlineAPI.Controllers
         }
 
         /// <summary>
-        /// Vista previa en Base64 del PDF de un avalúo
-        /// POST api/Pdf/avaluo/{avaluoId}/preview
+        /// Generar y descargar PDF de un avalúo
+        /// GET api/Pdf/avaluo/{avaluoId}/descargar
+        /// </summary>
+        [HttpGet("CheckList/{avaluoId}/descargar")]
+        [ProducesResponseType(typeof(FileContentResult), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> DescargarPdfCheckList(int avaluoId)
+        {
+            try
+            {
+                _logger.LogInformation($"📥 Solicitud de descarga PDF para avalúo {avaluoId}");
+
+                var data = await ObtenerDatosCheckListAsync(avaluoId);
+                if (data == null)
+                    return NotFound(new { Message = "Avalúo no encontrado" });
+
+                var pdfBytes = await _pdfService.GenerarPdfCheckListAsync(data);
+                string folio = $"Avaluo_{avaluoId:D6}";
+
+                return File(pdfBytes, "application/pdf", $"{folio}.pdf");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"❌ Error al generar PDF para avalúo {avaluoId}");
+                return StatusCode(500, new { Message = $"Error al generar PDF: {ex.Message}" });
+            }
+        }
+
+        /// <summary>
+        /// Vista previa en Base64 del PDF de un CheckList 
+        /// POST api/Pdf/CheckList/{avaluoId}/preview
         /// </summary>
         [HttpPost("CheckList/{avaluoId}/preview")]
         [ProducesResponseType(typeof(PdfPreviewResponse), StatusCodes.Status200OK)]
@@ -559,7 +588,7 @@ namespace CarSlineAPI.Controllers
         MedidaLlantaDelanteraIzq = c.MedidaLlantaDelanteraIzq,
         MedidaLlantaTraseraDer = c.MedidaLlantaTraseraDer,
         MedidaLlantaTraseraIzq = c.MedidaLlantaTraseraIzq,
-        MarcaLlantaRefaccion = c.MedidaLlantaRefaccion,
+        MarcaLlantaRefaccion = c.MarcaLlantaRefaccion,
         MedidaLlantaRefaccion = c.MedidaLlantaRefaccion,
         Comentarios = c.Comentarios,
         Observaciones = c.Observaciones,
