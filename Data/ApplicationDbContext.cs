@@ -47,6 +47,9 @@ namespace CarSlineAPI.Data
         public DbSet<Modelo> Modelos { get; set; }
         public DbSet<Versiona> Versiones { get; set; }
         public DbSet<CheckListAvaluo> CheckListAvaluos { get; set; }
+        public DbSet<ReacondicionamientoEstetico> ReacondicionamientosEsteticos { get; set; }
+        public DbSet<TrabajoReacondicionamientoEstetico> TrabajosReacondicionamientoEstetico { get; set; }
+        public DbSet<ReacondicionamientoVehiculo> ReacondicionamientosVehiculos { get; set; }
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
             base.OnModelCreating(modelBuilder);
@@ -386,6 +389,153 @@ namespace CarSlineAPI.Data
                 entity.HasOne(e => e.Vigilante)
                     .WithMany()
                     .HasForeignKey(e => e.VigilanteId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ============================================
+            // REACONDICIONAMIENTO ESTÉTICO
+            // ============================================
+            modelBuilder.Entity<ReacondicionamientoEstetico>(entity =>
+            {
+                entity.ToTable("reacondicionamientosesteticos");
+
+                entity.HasIndex(e => e.EncargadoEsteticaId)
+                    .HasDatabaseName("IX_Encargado");
+
+                entity.HasIndex(e => e.VehiculoId)
+                    .HasDatabaseName("IX_Vehiculo");
+
+                entity.HasIndex(e => e.EstadoOrdenId)
+                    .HasDatabaseName("IX_Estado");
+
+                entity.Property(e => e.FechaCreacion)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(e => e.CostoTotal)
+                    .HasDefaultValue(0.00m);
+
+                entity.Property(e => e.TotalTrabajos)
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.TrabajosCompletados)
+                    .HasDefaultValue(0);
+
+                entity.Property(e => e.ProgresoGeneral)
+                    .HasDefaultValue(0.00m);
+
+                entity.Property(e => e.Activo)
+                    .HasDefaultValue(true);
+
+                entity.HasOne(e => e.EncargadoEstetica)
+                    .WithMany()
+                    .HasForeignKey(e => e.EncargadoEsteticaId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Vehiculo)
+                    .WithMany()
+                    .HasForeignKey(e => e.VehiculoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.EstadoOrden)
+                    .WithMany()
+                    .HasForeignKey(e => e.EstadoOrdenId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasMany(e => e.Trabajos)
+                    .WithOne(t => t.ReacondicionamientoEstetico)
+                    .HasForeignKey(t => t.ReacondicionamientoEsteticoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // ============================================
+            // TRABAJOS DE REACONDICIONAMIENTO ESTÉTICO
+            // ============================================
+            modelBuilder.Entity<TrabajoReacondicionamientoEstetico>(entity =>
+            {
+                entity.ToTable("trabajosreacondicionamientoestetico");
+
+                entity.HasIndex(e => e.ReacondicionamientoEsteticoId)
+                    .HasDatabaseName("IX_ReacondEstetico");
+
+                entity.HasIndex(e => e.EstadoTrabajo)
+                    .HasDatabaseName("IX_EstadoTrabajo");
+
+                entity.Property(e => e.EstadoTrabajo)
+                    .HasDefaultValue(1);
+
+                entity.Property(e => e.CostoTrabajo)
+                    .HasDefaultValue(0.00m);
+
+                entity.Property(e => e.Activo)
+                    .HasDefaultValue(true);
+            });
+
+            // ============================================
+            // REACONDICIONAMIENTO GENERAL (tabla principal)
+            // ============================================
+            modelBuilder.Entity<ReacondicionamientoVehiculo>(entity =>
+            {
+                entity.ToTable("reacondicionamientosvehiculos");
+
+                // Unique: un avalúo → un reacondicionamiento
+                entity.HasIndex(e => e.AvaluoId)
+                    .IsUnique()
+                    .HasDatabaseName("UX_Avaluo");
+
+                entity.HasIndex(e => e.VehiculoId)
+                    .HasDatabaseName("IX_VehiculoId");
+
+                entity.HasIndex(e => e.ReacondicionamientoMecanicoId)
+                    .HasDatabaseName("IX_ReacondicionamientoMecanicoId");
+
+                entity.HasIndex(e => e.ReacondicionamientoEsteticoId)
+                    .HasDatabaseName("IX_ReacondicionamientoEsteticoId");
+
+                entity.Property(e => e.FechaCompra)
+                    .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                entity.Property(e => e.TieneReacondicionamientoMecanico)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.TieneReacondicionamientoEstetico)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.TieneFotografias)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.VehiculoListoVenta)
+                    .HasDefaultValue(false);
+
+                entity.Property(e => e.CostoReacondicionamientoMecanico)
+                    .HasDefaultValue(0.00m);
+
+                entity.Property(e => e.CostoReacondicionamientoEstetico)
+                    .HasDefaultValue(0.00m);
+
+                // Columna generada (STORED): EF Core no la escribe, solo la lee
+                entity.Property(e => e.CostoTotalReacondicionamiento)
+                    .ValueGeneratedOnAddOrUpdate();
+
+                entity.HasOne(e => e.Avaluo)
+                    .WithMany()
+                    .HasForeignKey(e => e.AvaluoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                entity.HasOne(e => e.Vehiculo)
+                    .WithMany()
+                    .HasForeignKey(e => e.VehiculoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // FK hacia ordenesgenerales (reacondicionamiento mecánico)
+                entity.HasOne(e => e.ReacondicionamientoMecanico)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReacondicionamientoMecanicoId)
+                    .OnDelete(DeleteBehavior.Restrict);
+
+                // FK hacia reacondicionamientosesteticos
+                entity.HasOne(e => e.ReacondicionamientoEstetico)
+                    .WithMany()
+                    .HasForeignKey(e => e.ReacondicionamientoEsteticoId)
                     .OnDelete(DeleteBehavior.Restrict);
             });
 

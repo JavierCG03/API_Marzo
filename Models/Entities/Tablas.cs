@@ -1348,6 +1348,165 @@ namespace CarSlineAPI.Models.Entities
         public virtual Usuario? Vigilante { get; set; }
     }
 
+    // ============================================
+    // REACONDICIONAMIENTO ESTÉTICO
+    // ============================================
+
+    [Table("reacondicionamientosesteticos")]
+    public class ReacondicionamientoEstetico
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int EncargadoEsteticaId { get; set; }
+
+        [Required]
+        public int VehiculoId { get; set; }
+
+        public DateTime FechaCreacion { get; set; } = DateTime.Now;
+
+        public DateTime? FechaFinalizacion { get; set; }
+
+        public int EstadoOrdenId { get; set; } = 1;
+
+        [Column(TypeName = "DECIMAL(7,2)")]
+        public decimal CostoTotal { get; set; } = 0.00m;
+
+        public int TotalTrabajos { get; set; } = 0;
+        public int TrabajosCompletados { get; set; } = 0;
+
+        [Column(TypeName = "DECIMAL(5,2)")]
+        public decimal ProgresoGeneral { get; set; } = 0.00m;
+
+        public bool Activo { get; set; } = true;
+
+        // Navegación
+        [ForeignKey("EncargadoEsteticaId")]
+        public virtual Usuario? EncargadoEstetica { get; set; }
+
+        [ForeignKey("VehiculoId")]
+        public virtual Vehiculo? Vehiculo { get; set; }
+
+        [ForeignKey("EstadoOrdenId")]
+        public virtual EstadoOrden? EstadoOrden { get; set; }
+
+        public virtual ICollection<TrabajoReacondicionamientoEstetico> Trabajos { get; set; }
+            = new List<TrabajoReacondicionamientoEstetico>();
+    }
+
+    // ============================================
+    // TRABAJOS DE REACONDICIONAMIENTO ESTÉTICO
+    // ============================================
+
+    [Table("trabajosreacondicionamientoestetico")]
+    public class TrabajoReacondicionamientoEstetico
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int ReacondicionamientoEsteticoId { get; set; }
+
+        [Required, MaxLength(255)]
+        public string Trabajo { get; set; } = string.Empty;
+
+        [MaxLength(255)]
+        public string? EmpresaQueRealizara { get; set; }
+
+        public DateTime? FechaHoraInicio { get; set; }
+        public DateTime? FechaHoraTermino { get; set; }
+
+        [Column(TypeName = "TEXT")]
+        public string? IndicacionesTrabajo { get; set; }
+
+        /// <summary>1 = Pendiente, 2 = Proceso, 3 = Completado</summary>
+        public int EstadoTrabajo { get; set; } = 1;
+
+        [Column(TypeName = "DECIMAL(8,2)")]
+        public decimal CostoTrabajo { get; set; } = 0.00m;
+
+        public bool Activo { get; set; } = true;
+
+        // Navegación
+        [ForeignKey("ReacondicionamientoEsteticoId")]
+        public virtual ReacondicionamientoEstetico? ReacondicionamientoEstetico { get; set; }
+    }
+
+    // ============================================
+    // REACONDICIONAMIENTOS GENERALES (tabla principal)
+    // ============================================
+
+    [Table("reacondicionamientosvehiculos")]
+    public class ReacondicionamientoVehiculo
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        public int AvaluoId { get; set; }
+
+        [Required]
+        public int VehiculoId { get; set; }
+
+        public int? ReacondicionamientoMecanicoId { get; set; }
+
+
+        public int? ReacondicionamientoEsteticoId { get; set; }
+
+        public DateTime FechaCompra { get; set; } = DateTime.Now;
+
+        // ── MECÁNICO ──
+        public DateTime? FechaInicioReacondicionamientoMecanico { get; set; }
+        public DateTime? FechaFinalizacionReacondicionamientoMecanico { get; set; }
+        public bool TieneReacondicionamientoMecanico { get; set; } = false;
+
+        [Column(TypeName = "DECIMAL(10,2)")]
+        public decimal CostoReacondicionamientoMecanico { get; set; } = 0.00m;
+
+        // ── ESTÉTICO ──
+        public DateTime? FechaInicioReacondicionamientoEstetico { get; set; }
+        public DateTime? FechaFinalizacionReacondicionamientoEstetico { get; set; }
+        public bool TieneReacondicionamientoEstetico { get; set; } = false;
+
+        [Column(TypeName = "DECIMAL(10,2)")]
+        public decimal CostoReacondicionamientoEstetico { get; set; } = 0.00m;
+
+        // ── FOTOS ──
+        public DateTime? FechaInicioTomaFotografias { get; set; }
+        public DateTime? FechaFinalizacionTomaFotografias { get; set; }
+        public bool TieneFotografias { get; set; } = false;
+
+        // REACONDICIONAMIENTO EN PROCESO
+        public bool ReacondicionamientoMecanicoEnProceso { get; set; } = false;
+        public bool ReacondicionamientoEsteticoEnProceso { get; set; } = false;
+        public bool VehiculoEnTomaFotografias { get; set; } = false;
+
+
+        // ── FINAL ──
+        public DateTime? FechaVehiculoListo { get; set; }
+        public bool VehiculoListoVenta { get; set; } = false;
+        public DateTime? FechaLiberacionVehiculo { get; set; }
+
+        /// <summary>Columna generada: CostoMecanico + CostoEstetico</summary>
+        [Column(TypeName = "DECIMAL(10,2)")]
+        [DatabaseGenerated(DatabaseGeneratedOption.Computed)]
+        public decimal CostoTotalReacondicionamiento { get; private set; }
+
+        // ── Navegación ──
+        [ForeignKey("AvaluoId")]
+        public virtual DatosAvaluo? Avaluo { get; set; }
+
+        [ForeignKey("VehiculoId")]
+        public virtual Vehiculo? Vehiculo { get; set; }
+
+        [ForeignKey("ReacondicionamientoMecanicoId")]
+        public virtual OrdenGeneral? ReacondicionamientoMecanico { get; set; }
+
+        [ForeignKey("ReacondicionamientoEsteticoId")]
+        public virtual ReacondicionamientoEstetico? ReacondicionamientoEstetico { get; set; }
+    }
+
 }
 
 

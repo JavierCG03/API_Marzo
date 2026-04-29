@@ -3,6 +3,8 @@ using CarSlineAPI.Models.DTOs;
 using CarSlineAPI.Models.Entities;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Org.BouncyCastle.Ocsp;
+using static QuestPDF.Helpers.Colors;
 
 
 namespace CarSlineAPI.Controllers
@@ -1120,49 +1122,102 @@ namespace CarSlineAPI.Controllers
         /// VehiculoComprado
         /// </summary>
         [HttpPut("VehiculoComprado/{id}")]
-        [ProducesResponseType(typeof(CrearAvaluoResponse), StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> TomaVehiculo(int id)
         {
-            try
-            {
-                var avaluo = await _db.DatosAvaluos
-                    .FirstOrDefaultAsync(a => a.Id == id && a.Activo);
+            var strategy = _db.Database.CreateExecutionStrategy();
 
-                if (avaluo == null)
-                    return NotFound(new CrearAvaluoResponse
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _db.Database.BeginTransactionAsync();
+
+                try
+                {
+                    var avaluo = await _db.DatosAvaluos
+                        .FirstOrDefaultAsync(a => a.Id == id && a.Activo);
+
+                    if (avaluo == null)
+                    {
+                        await transaction.RollbackAsync();
+
+                        return NotFound(new CrearAvaluoResponse
+                        {
+                            Success = false,
+                            Message = "Avalúo no encontrado"
+                        });
+                    }
+
+                    int vehiculoId;
+
+                    var vehiculoExistente = await _db.Vehiculos
+                        .FirstOrDefaultAsync(v => v.VIN == avaluo.VIN);
+
+                    if (vehiculoExistente != null)
+                    {
+                        vehiculoId = vehiculoExistente.Id;
+                    }
+                    else
+                    {
+                        var veh = new Vehiculo
+                        {
+                            ClienteId = 1,
+                            VIN = avaluo.VIN,
+                            Marca = avaluo.Marca,
+                            Modelo = avaluo.Modelo,
+                            Version = avaluo.Version,
+                            Anio = avaluo.Anio,
+                            Color = avaluo.Color,
+                            Placas = "S/P",
+                            KilometrajeInicial = avaluo.Kilometraje,
+                            Activo = true
+                        };
+
+                        _db.Vehiculos.Add(veh);
+                        await _db.SaveChangesAsync();
+
+                        vehiculoId = veh.Id;
+                    }
+
+                    var reac = new ReacondicionamientoVehiculo
+                    {
+                        AvaluoId = avaluo.Id,
+                        VehiculoId = vehiculoId,
+                        FechaCompra = DateTime.Now,
+                        TieneReacondicionamientoMecanico = false,
+                        TieneReacondicionamientoEstetico = false,
+                        TieneFotografias = false,
+                        VehiculoListoVenta = false,
+                    };
+
+                    _db.ReacondicionamientosVehiculos.Add(reac);
+
+                    avaluo.VehiculoComprado = true;
+                    avaluo.Activo = false;
+
+                    await _db.SaveChangesAsync();
+
+                    await transaction.CommitAsync();
+
+                    return Ok(new CrearAvaluoResponse
+                    {
+                        Success = true,
+                        Message = "Avalúo Concluido, Toma concretada",
+                        AvaluoId = avaluo.Id
+                    });
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+
+                    _logger.LogError(ex, $"Error al comprar este Vehiculo {id}");
+
+                    return StatusCode(500, new CrearAvaluoResponse
                     {
                         Success = false,
-                        Message = "Avalúo no encontrado"
+                        Message = "Error al comprar avalúo"
                     });
-
-                avaluo.VehiculoComprado = true;
-                avaluo.Activo = false;
-
-                await _db.SaveChangesAsync();
-
-                _logger.LogInformation(
-                    $"Avalúo {avaluo.Marca} {avaluo.Modelo} Cancelado");
-
-                return Ok(new CrearAvaluoResponse
-                {
-                    Success = true,
-                    Message = "Avalúo Concluido, Toma concretada",
-                    AvaluoId = avaluo.Id,
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, $"Error al comprar este Vehiculo {id}");
-                return StatusCode(500, new CrearAvaluoResponse
-                {
-                    Success = false,
-                    Message = "Error al comprar avalúo"
-                });
-            }
+                }
+            });
         }
-
-
         // ============================================
         // GET: api/Avaluos/foto/{id}
         // ============================================
