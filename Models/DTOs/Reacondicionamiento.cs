@@ -174,6 +174,27 @@ namespace CarSlineAPI.Models.DTOs
         public List<ReacondicionamientoEsteticoDto> Reacondicionamientos { get; set; } = new();
     }
 
+    public class ListaReacondicionmientosMecanicosEnProceso
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public List<ReacondicionamientoMecanicoEnProceso> Reacondicionamientos { get; set; } = new();
+    }
+
+    public class ReacondicionamientoMecanicoEnProceso
+    {
+        public int Id { get; set; }
+        public int VehiculoId { get; set; }
+        public int AvaluoId { get; set; }
+        public string VehiculoInfo { get; set; }= string.Empty;
+        public string VIN { get; set; }=string.Empty;
+
+        public DateTime? FechaInicioReacondicionamiento { get; set; }
+        public int? OrdenReacondicionamientoId { get; set; }
+    }
+
+
+
     // ============================================
     // RESPONSE DTOs — REACONDICIONAMIENTO GENERAL
     // ============================================

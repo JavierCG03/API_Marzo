@@ -539,6 +539,21 @@ namespace CarSlineAPI.Data
                     .OnDelete(DeleteBehavior.Restrict);
             });
 
+            // ============================================
+            // CONVENCIÓN GLOBAL: TODO A MINÚSCULAS
+            // ============================================
+            foreach (var entity in modelBuilder.Model.GetEntityTypes())
+            {
+                // Si NO tiene nombre de tabla explícito, lo convertimos a minúsculas
+                var tableName = entity.GetTableName();
+
+                if (!string.IsNullOrEmpty(tableName))
+                {
+                    entity.SetTableName(tableName.ToLower());
+                }
+            }
+
         }
+
     }
 }

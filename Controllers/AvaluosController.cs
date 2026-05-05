@@ -15,8 +15,8 @@ namespace CarSlineAPI.Controllers
     {
         private readonly ApplicationDbContext _db;
         private readonly ILogger<AvaluosController> _logger;
-        private readonly string _rutaBaseAvaluos = @"C:\Users\Carsline\Downloads\Avaluos";
-
+        //private readonly string _rutaBaseAvaluos = @"C:\Users\Carsline\Downloads\Avaluos";
+        private readonly string _rutaBaseAvaluos = "/datos/carsline/archivos/Avaluos";
         public AvaluosController(ApplicationDbContext db, ILogger<AvaluosController> logger)
         {
             _db = db;
@@ -897,6 +897,77 @@ namespace CarSlineAPI.Controllers
         }
 
         // ============================================
+        // GET: api/Avaluos/Reparaciones/{id}
+        // ============================================
+        /// <summary>
+        /// Obtener reparaciones de un avaluo por id 
+        /// </summary>
+
+        [HttpGet("Reparaciones/{id}")]
+        [ProducesResponseType(typeof(AvaluoReparacionesResponse), StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        public async Task<IActionResult> ObtenerReparacionesAvaluo(int id)
+        {
+            try
+            {
+                var baseAvaluo = await _db.DatosAvaluos
+                    .Where(a => a.Id == id)
+                    .Select(a => new { a.Id, a.Reparaciones})
+
+                    .FirstOrDefaultAsync();
+                if (baseAvaluo == null)
+
+                    return NotFound(new AvaluoReparacionesResponse
+                    {
+                        Success = false,
+                        Message = "Avalúo no encontrado"
+                    });
+
+                var query = _db.DatosAvaluos.Where(a => a.Id == id);
+
+
+                if (baseAvaluo.Reparaciones != null)
+                {
+                    query = query.Include(a => a.Reparaciones);
+                }
+
+                query = query.Include(a => a.Tecnico);
+
+                var avaluo = await query.FirstOrDefaultAsync();
+
+                return Ok(new AvaluoReparacionesResponse
+                {
+                    Success = true,
+                    Message = "Avalúo encontrado",
+                    NombreTecnico = avaluo.Tecnico?.NombreCompleto ?? "",
+                    VehiculoCompleto = $"{avaluo.Marca} {avaluo.Modelo} {avaluo.Version} / {avaluo.Anio}",
+                    VIN = avaluo.VIN,
+                    Reparaciones = avaluo.AvaluoMecanico == true && avaluo.Reparaciones != null
+                        ? avaluo.Reparaciones.Select(r => new ReparacionDto
+                        {
+                            Id = r.Id,
+                            ReparacionNecesaria = r.ReparacionNecesaria,
+                            DescripcionReparacion = string.IsNullOrWhiteSpace(r.DescripcionReparacion)
+                            ? null
+                            : r.DescripcionReparacion,
+                            CostoAproximado = r.CostoAproximado
+                        }).ToList()
+                        : null,
+
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error al obtener  reparaciones del avalúo {id}");
+                return StatusCode(500, new AvaluoReparacionesResponse
+                {
+                    Success = false,
+                    Message = "Error al obtener avalúo"
+                });
+            }
+        }
+
+        // ============================================
         // PUT: api/Avaluos/TratarPrecio/{id}
         // ============================================
         /// <summary>
@@ -1073,7 +1144,7 @@ namespace CarSlineAPI.Controllers
         /// <summary>
         /// Tomar vehiculo para revision
         /// </summary>
-        [HttpPut("TomarVehiculoRevision/{id}")]
+        [HttpPut("ig/{id}")]
         [ProducesResponseType(typeof(CrearAvaluoResponse), StatusCodes.Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
         public async Task<IActionResult> RevisionAvaluo(int id)

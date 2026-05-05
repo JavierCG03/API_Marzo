@@ -37,6 +37,7 @@ namespace CarSlineAPI.Models.DTOs
         public int Reparaciones { get; set; }
         public int Diagnosticos { get; set; }
         public int Garantias { get; set; }
+        public int Reacondicionamientos { get; set; }
     }
     public class TrabajosActivosTecnicoDto
     {
@@ -160,6 +161,8 @@ namespace CarSlineAPI.Models.DTOs
 
         [Required]
         public DateTime FechaHoraPromesaEntrega { get; set; }
+
+        public int? ReacondicionamientoId { get; set; }
 
         public string? ObservacionesAsesor { get; set; }
 

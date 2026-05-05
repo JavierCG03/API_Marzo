@@ -313,6 +313,60 @@ namespace CarSlineAPI.Controllers
                 });
             }
         }
+
+
+        // ============================================
+        // GET: api/ReacondicionamientoVehiculo/ReacondicionamientoMecanicoProceso
+        // ============================================
+        /// <summary>
+        /// Obtener todos los vehículos en proceso de reacondicionamiento mecanico
+        /// </summary>
+        [HttpGet("ReacondicionamientoMecanicoProceso")]
+        [ProducesResponseType(typeof(ListaReacondicionmientosMecanicosEnProceso), StatusCodes.Status200OK)]
+        public async Task<IActionResult> ObtenerReacondicionamientosMecanicosEnProceso()
+        {
+            try
+            {
+                var lista = await _db.ReacondicionamientosVehiculos
+                    .Where(r => !r.VehiculoListoVenta
+                        && r.ReacondicionamientoMecanicoEnProceso
+                        && !r.TieneReacondicionamientoMecanico)
+                    .OrderBy(r => r.FechaCompra)
+                    .Select(r => new ReacondicionamientoMecanicoEnProceso
+                    {
+                        Id = r.Id,
+                        VehiculoId = r.VehiculoId,
+                        AvaluoId = r.AvaluoId,
+                        VehiculoInfo = r.Vehiculo != null
+                            ? r.Vehiculo.Marca + " " + r.Vehiculo.Modelo + " " + r.Vehiculo.Anio
+                            : "",
+                        VIN = r.Vehiculo != null ? r.Vehiculo.VIN : "",
+                        OrdenReacondicionamientoId = r.ReacondicionamientoMecanicoId,
+                        FechaInicioReacondicionamiento = r.FechaInicioReacondicionamientoMecanico,
+                    })
+                    .ToListAsync();
+
+                return Ok(new ListaReacondicionmientosMecanicosEnProceso
+                {
+                    Success = true,
+                    Message = lista.Any()
+                        ? $"Se encontraron {lista.Count} vehículo(s) en reacondicionamiento"
+                        : "Sin vehículos en reacondicionamiento",
+                    Reacondicionamientos = lista
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener reacondicionamientos pendientes");
+                return StatusCode(500, new ListaReacondicionmientosMecanicosEnProceso
+                {
+                    Success = false,
+                    Message = "Error al obtener reacondicionamientos"
+                });
+            }
+        }
+
+
         // ============================================
         // GET: api/ReacondicionamientoVehiculo/listos-venta
         // ============================================

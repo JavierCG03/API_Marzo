@@ -31,8 +31,8 @@ namespace CarSlineAPI.Services
     public class PdfService : IPdfService
     {
         private readonly ILogger<PdfService> _logger;
-        private readonly string _rutaBasePdfs = @"C:\Users\Carsline\Downloads\Evidencias_Ordenes\";
-
+        //private readonly string _rutaBasePdfs = @"C:\Users\Carsline\Downloads\Evidencias_Ordenes\";
+        private readonly string _rutaBasePdfs = "/datos/carsline/archivos/Evidencias_Ordenes/"; 
         public PdfService(ILogger<PdfService> logger)
         {
             _logger = logger;

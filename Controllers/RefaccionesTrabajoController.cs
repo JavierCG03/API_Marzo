@@ -459,7 +459,8 @@ namespace CarSlineAPI.Controllers
                     Servicios = conteos.FirstOrDefault(c => c.TipoOrdenId == 1).Total,
                     Diagnosticos = conteos.FirstOrDefault(c => c.TipoOrdenId == 2).Total,
                     Reparaciones = conteos.FirstOrDefault(c => c.TipoOrdenId == 3).Total,
-                    Garantias = conteos.FirstOrDefault(c => c.TipoOrdenId == 4).Total
+                    Garantias = conteos.FirstOrDefault(c => c.TipoOrdenId == 4).Total,
+                    Reacondicionamientos = conteos.FirstOrDefault(c => c.TipoOrdenId == 5).Total
                 });
             }
             catch (Exception ex)

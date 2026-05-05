@@ -338,6 +338,16 @@ namespace CarSlineAPI.Models.DTOs
         public List<ReparacionDto> Reparaciones { get; set; } = new(); 
 
     }
+    public class AvaluoReparacionesResponse
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = string.Empty;
+        public string VehiculoCompleto { get; set; } = string.Empty;
+        public string VIN { get; set; } = string.Empty;
+        public string NombreTecnico { get; set; } = string.Empty;
+        public List<ReparacionDto> Reparaciones { get; set; } = new();
+
+    }
 
     // ============================================
     // DATA TRANSFER OBJECTS

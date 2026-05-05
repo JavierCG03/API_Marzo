@@ -140,6 +140,23 @@ namespace CarSlineAPI.Controllers
                         }
                     }
 
+                    if (request.TipoOrdenId == 5)
+                    {
+                        if (!request.ReacondicionamientoId.HasValue)
+                            throw new Exception("ReacondicionamientoId es requerido");
+
+                        var reacond = await _db.ReacondicionamientosVehiculos
+                            .FirstOrDefaultAsync(r => r.Id == request.ReacondicionamientoId.Value);
+
+                        if (reacond == null)
+                            throw new Exception("Reacondicionamiento no encontrado");
+
+                        if (reacond.ReacondicionamientoMecanicoId != null)
+                            throw new Exception("Ya tiene orden");
+
+                        reacond.ReacondicionamientoMecanicoId = ordenGeneral.Id;
+                    }
+
                     await _db.SaveChangesAsync();
                     await transaction.CommitAsync();
 
@@ -252,7 +269,8 @@ namespace CarSlineAPI.Controllers
                     Servicios = conteos.FirstOrDefault(c => c.TipoOrdenId == 1)?.Total ?? 0,
                     Diagnosticos = conteos.FirstOrDefault(c => c.TipoOrdenId == 2)?.Total ?? 0,
                     Reparaciones = conteos.FirstOrDefault(c => c.TipoOrdenId == 3)?.Total ?? 0,
-                    Garantias = conteos.FirstOrDefault(c => c.TipoOrdenId == 4)?.Total ?? 0
+                    Garantias = conteos.FirstOrDefault(c => c.TipoOrdenId == 4)?.Total ?? 0,
+                    Reacondicionamientos = conteos.FirstOrDefault(c => c.TipoOrdenId == 5)?.Total ?? 0
                 });
             }
             catch (Exception ex)
